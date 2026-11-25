@@ -573,7 +573,7 @@ func (a *appConfig) installationToken(hc *http.Client) (string, error) {
 		return "", err
 	}
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("https://api.github.com/app/installations/%s/access_tokens", a.installationID), nil)
+		fmt.Sprintf(apiBase()+"/app/installations/%s/access_tokens", a.installationID), nil)
 	if err != nil {
 		return "", err
 	}
@@ -620,6 +620,15 @@ type Client struct {
 	hc    *http.Client
 }
 
+// apiBase is the REST API root — GITHUB_API_URL overrides it for GitHub
+// Enterprise Server, e.g. https://ghe.corp.example/api/v3 (#38).
+func apiBase() string {
+	if base := os.Getenv("GITHUB_API_URL"); base != "" {
+		return strings.TrimSuffix(base, "/")
+	}
+	return "https://api.github.com"
+}
+
 // NewClient builds a client from a token.
 func NewClient(token string) *Client {
 	return &Client{Token: token, hc: &http.Client{Timeout: 20 * time.Second}}
@@ -650,7 +659,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		return []byte(`{}`), nil
 	}
 	c.recordAPI()
-	req, err := http.NewRequest(method, "https://api.github.com"+path, reader)
+	req, err := http.NewRequest(method, apiBase()+path, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -718,7 +727,7 @@ func (c *Client) GetAll(path string) ([]json.RawMessage, error) {
 	var all []json.RawMessage
 	next := path + sep + "per_page=100"
 	for next != "" {
-		req, err := http.NewRequest("GET", "https://api.github.com"+next, nil)
+		req, err := http.NewRequest("GET", apiBase()+next, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -756,8 +765,10 @@ func nextLink(header string) string {
 			return ""
 		}
 		u := part[start+1 : end]
-		if idx := strings.Index(u, "api.github.com"); idx != -1 {
-			return u[idx+len("api.github.com"):]
+		for _, host := range []string{"api.github.com", strings.TrimPrefix(strings.TrimPrefix(apiBase(), "https://"), "http://")} {
+			if idx := strings.Index(u, host); idx != -1 {
+				return u[idx+len(host):]
+			}
 		}
 	}
 	return ""
