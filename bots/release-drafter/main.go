@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
@@ -98,6 +99,15 @@ func main() {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)
+
+	// explicit rebuild mode: release-drafter backfill owner/repo
+	if len(os.Args) > 2 && os.Args[1] == "backfill" {
+		runBackfill(client, os.Args[2])
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "backfill" {
+		log.Fatal("usage: release-drafter backfill owner/repo")
+	}
 
 	ghbot.Serve(cfg, "release-drafter", func(event string, payload []byte) {
 		if event != "pull_request" {
