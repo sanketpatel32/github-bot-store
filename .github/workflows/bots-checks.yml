@@ -38,3 +38,14 @@ jobs:
       - run: go run ./bots/auto-merger
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  flaky-test-tracker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - run: go run ./bots/flaky-test-tracker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
