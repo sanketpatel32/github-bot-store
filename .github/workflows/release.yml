@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build:
@@ -45,6 +46,15 @@ jobs:
             echo "{\"name\": \"$name\", \"type\": \"go\", \"dependencies\": []}" >> dist/sbom.jsonl
           done
           ls -la dist/
+
+      - name: sign artifacts with cosign (keyless)
+        uses: sigstore/cosign-installer@v3
+      - run: |
+          cd dist
+          for f in *.tar.gz; do
+            cosign sign-blob --yes "$f" --output-signature "$f.sig" --output-certificate "$f.pem"
+          done
+          cosign sign-blob --yes checksums.txt --output-signature checksums.txt.sig --output-certificate checksums.txt.pem
 
       - name: attach binaries to release
         uses: softprops/action-gh-release@v2
