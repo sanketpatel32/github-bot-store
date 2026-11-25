@@ -70,6 +70,9 @@ func (st *state) save() {
 
 func main() {
 	cfg := ghbot.LoadConfig("flaky-test-tracker", "8129")
+	if ghbot.HandleCLIArgs("flaky-test-tracker", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 	st := loadState()
 

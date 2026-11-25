@@ -47,6 +47,9 @@ func loadRules() map[string][]string {
 
 func main() {
 	cfg := ghbot.LoadConfig("keyword-issue-labeler", "8114")
+	if ghbot.HandleCLIArgs("keyword-issue-labeler", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 	rules := loadRules()
 

@@ -91,6 +91,9 @@ func insertEntry(body, heading, entry string) string {
 
 func main() {
 	cfg := ghbot.LoadConfig("release-drafter", "8113")
+	if ghbot.HandleCLIArgs("release-drafter", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "release-drafter", func(event string, payload []byte) {

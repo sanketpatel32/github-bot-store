@@ -72,6 +72,9 @@ func sweep(client *ghbot.Client, repo string, graceHours int) {
 
 func main() {
 	cfg := ghbot.LoadConfig("issue-triage-reminder", "8118")
+	if ghbot.HandleCLIArgs("issue-triage-reminder", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 	repo := os.Getenv("REPO")
 	if repo == "" {

@@ -38,6 +38,9 @@ func loadMapping() map[string]string {
 
 func main() {
 	cfg := ghbot.LoadConfig("pr-path-labeler", "8121")
+	if ghbot.HandleCLIArgs("pr-path-labeler", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "pr-path-labeler", func(event string, payload []byte) {

@@ -39,6 +39,9 @@ type CheckEvent struct {
 
 func main() {
 	cfg := ghbot.LoadConfig("ci-failure-commenter", "8115")
+	if ghbot.HandleCLIArgs("ci-failure-commenter", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "ci-failure-commenter", func(event string, payload []byte) {

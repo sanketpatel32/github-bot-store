@@ -155,6 +155,9 @@ func tryMerge(client *ghbot.Client, repo string, number int) {
 
 func main() {
 	cfg := ghbot.LoadConfig("auto-merger", "8110")
+	if ghbot.HandleCLIArgs("auto-merger", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "auto-merger", func(event string, payload []byte) {

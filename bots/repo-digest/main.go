@@ -200,6 +200,9 @@ func runDigest(client *ghbot.Client, repo string) bool {
 
 func main() {
 	cfg := ghbot.LoadConfig("repo-digest", "8111")
+	if ghbot.HandleCLIArgs("repo-digest", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	repo := os.Getenv("REPO")

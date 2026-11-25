@@ -48,6 +48,9 @@ func isBreaking(title, body string) bool {
 
 func main() {
 	cfg := ghbot.LoadConfig("breaking-change-guard", "8123")
+	if ghbot.HandleCLIArgs("breaking-change-guard", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "breaking-change-guard", func(event string, payload []byte) {

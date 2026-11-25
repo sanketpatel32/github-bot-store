@@ -49,6 +49,9 @@ func keywords(title string) []string {
 
 func main() {
 	cfg := ghbot.LoadConfig("duplicate-issue-hunter", "8107")
+	if ghbot.HandleCLIArgs("duplicate-issue-hunter", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "duplicate-issue-hunter", func(event string, payload []byte) {

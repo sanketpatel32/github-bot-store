@@ -89,6 +89,9 @@ func sweep(client *ghbot.Client, repo string) {
 
 func main() {
 	cfg := ghbot.LoadConfig("pr-aging-bot", "8116")
+	if ghbot.HandleCLIArgs("pr-aging-bot", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 	repo := os.Getenv("REPO")
 	if repo == "" {

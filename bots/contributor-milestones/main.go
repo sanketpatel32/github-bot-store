@@ -37,6 +37,9 @@ var milestones = map[int]string{
 
 func main() {
 	cfg := ghbot.LoadConfig("contributor-milestones", "8122")
+	if ghbot.HandleCLIArgs("contributor-milestones", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "contributor-milestones", func(event string, payload []byte) {

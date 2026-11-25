@@ -29,6 +29,9 @@ func branchFromRef(ref string) string {
 
 func main() {
 	cfg := ghbot.LoadConfig("merge-conflict-detector", "8109")
+	if ghbot.HandleCLIArgs("merge-conflict-detector", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "merge-conflict-detector", func(event string, payload []byte) {

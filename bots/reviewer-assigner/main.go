@@ -121,6 +121,9 @@ func matchOwners(rules []rule, filenames []string) []string {
 
 func main() {
 	cfg := ghbot.LoadConfig("reviewer-assigner", "8106")
+	if ghbot.HandleCLIArgs("reviewer-assigner", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "reviewer-assigner", func(event string, payload []byte) {

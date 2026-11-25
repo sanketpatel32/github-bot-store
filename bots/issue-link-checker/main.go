@@ -51,6 +51,9 @@ func linkOK(hc *http.Client, url string) bool {
 
 func main() {
 	cfg := ghbot.LoadConfig("issue-link-checker", "8126")
+	if ghbot.HandleCLIArgs("issue-link-checker", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "issue-link-checker", func(event string, payload []byte) {

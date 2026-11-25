@@ -45,6 +45,9 @@ func skipLabel() string {
 
 func main() {
 	cfg := ghbot.LoadConfig("changelog-checker", "8119")
+	if ghbot.HandleCLIArgs("changelog-checker", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "changelog-checker", func(event string, payload []byte) {

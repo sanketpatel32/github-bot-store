@@ -145,6 +145,82 @@ func (c *Client) recordAPI() {
 	metrics.Unlock()
 }
 
+// ---- CLI conveniences: version + doctor (#44) ----
+
+// Version is stamped at build time: go build -ldflags "-X ghbot.Version=x.y.z"
+var Version = "dev"
+
+// HandleCLIArgs implements the shared subcommands every bot gets for free:
+//
+//	<bot> version  — print version and exit
+//	<bot> doctor   — validate configuration and API connectivity, exit non-zero on failure
+//
+// Returns true if a subcommand ran (caller should exit).
+func HandleCLIArgs(name string, cfg Config) bool {
+	if len(os.Args) < 2 {
+		return false
+	}
+	switch os.Args[1] {
+	case "version":
+		fmt.Printf("%s %s\n", name, Version)
+		return true
+	case "doctor":
+		return runDoctor(name, cfg)
+	}
+	return false
+}
+
+func runDoctor(name string, cfg Config) bool {
+	problems := 0
+	check := func(ok bool, label, detail string) {
+		status := "ok"
+		if !ok {
+			status = "FAIL"
+			problems++
+		}
+		fmt.Printf("[%s] %s: %s\n", status, label, detail)
+	}
+
+	check(cfg.Token != "", "token", "GITHUB_TOKEN is set")
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		webhook := cfg.Secret != "" || os.Getenv("ALLOW_UNSIGNED_WEBHOOKS") == "true"
+		check(webhook, "webhook-secret", "WEBHOOK_SECRET set (or unsigned explicitly allowed)")
+	}
+
+	// connectivity + auth validity
+	client := NewClient(cfg.Token)
+	_, err := client.Do("GET", "/rate_limit", nil)
+	check(err == nil, "api-connectivity", fmt.Sprintf("GET /rate_limit err=%v", err))
+
+	if err == nil {
+		body, _ := client.Do("GET", "/rate_limit", nil)
+		var rl struct {
+			Resources struct {
+				Core struct {
+					Remaining int `json:"remaining"`
+				} `json:"core"`
+			} `json:"resources"`
+		}
+		if json.Unmarshal(body, &rl) == nil {
+			check(rl.Resources.Core.Remaining > 100, "rate-limit",
+				fmt.Sprintf("%d requests remaining", rl.Resources.Core.Remaining))
+		}
+	}
+
+	if repo := os.Getenv("REPO"); repo != "" {
+		_, err := client.Do("GET", "/repos/"+repo, nil)
+		check(err == nil, "repo-access", fmt.Sprintf("repo %s reachable", repo))
+	}
+
+	if appCfg != nil {
+		check(true, "github-app", "app credentials configured")
+	}
+
+	fmt.Printf("%s doctor: %d problem(s)\n", name, problems)
+	os.Exit(map[bool]int{true: 1, false: 0}[problems > 0])
+	return true
+}
+
 // ---- per-resource mutation coordination (#72) ----
 
 var resourceLocks = struct {

@@ -222,6 +222,9 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 
 func main() {
 	cfg := ghbot.LoadConfig("stale-bot", "8103")
+	if ghbot.HandleCLIArgs("stale-bot", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	repo := os.Getenv("REPO") // owner/name — required for cron bots

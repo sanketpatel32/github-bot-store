@@ -86,6 +86,9 @@ func validateIssue(body string, required []string) []string {
 
 func main() {
 	cfg := ghbot.LoadConfig("issue-form-validator", "8127")
+	if ghbot.HandleCLIArgs("issue-form-validator", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 
 	ghbot.Serve(cfg, "issue-form-validator", func(event string, payload []byte) {

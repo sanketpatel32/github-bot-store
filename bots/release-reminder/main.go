@@ -94,6 +94,9 @@ _This issue updates itself; close it when you release._`,
 
 func main() {
 	cfg := ghbot.LoadConfig("release-reminder", "8124")
+	if ghbot.HandleCLIArgs("release-reminder", cfg) {
+		return
+	}
 	client := ghbot.NewClient(cfg.Token)
 	repo := os.Getenv("REPO")
 	if repo == "" {
