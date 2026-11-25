@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
@@ -24,19 +26,63 @@ type PREvent struct {
 	} `json:"pull_request"`
 }
 
-func sizeLabel(changed int) string {
-	switch {
-	case changed < 20:
-		return "size/XS"
-	case changed < 100:
-		return "size/S"
-	case changed < 300:
-		return "size/M"
-	case changed < 800:
-		return "size/L"
-	default:
-		return "size/XL"
+// thresholds are configurable via SIZE_TIER_MAX env: comma-separated upper
+// bounds for XS,S,M,L (XL is everything above). Default matches the
+// long-standing 20/100/300/800 tiers (#27).
+func tierBounds() []int {
+	raw := os.Getenv("SIZE_TIER_MAX")
+	if raw == "" {
+		return []int{20, 100, 300, 800}
 	}
+	var out []int
+	for _, part := range strings.Split(raw, ",") {
+		n, err := strconv.Atoi(strings.TrimSpace(part))
+		if err != nil || n <= 0 {
+			log.Printf("SIZE_TIER_MAX entry %q invalid — using defaults", part)
+			return []int{20, 100, 300, 800}
+		}
+		out = append(out, n)
+	}
+	if len(out) != 4 {
+		log.Printf("SIZE_TIER_MAX needs exactly 4 comma-separated bounds — using defaults")
+		return []int{20, 100, 300, 800}
+	}
+	return out
+}
+
+func sizeLabel(changed int, bounds []int) string {
+	labels := []string{"size/XS", "size/S", "size/M", "size/L"}
+	for i, b := range bounds {
+		if changed < b {
+			return labels[i]
+		}
+	}
+	return "size/XL"
+}
+
+// generatedFileRe matches files that shouldn't count toward PR size:
+// lockfiles, generated code, minified assets (#27). Override with
+// GENERATED_PATTERNS (comma-separated substrings).
+var defaultGenerated = []string{
+	"package-lock.json", "yarn.lock", "pnpm-lock.yaml", "go.sum", "Cargo.lock",
+	"composer.lock", "Gemfile.lock", "poetry.lock", "Pipfile.lock",
+	".pb.go", "_generated", ".min.js", ".min.css", ".snap", "package.json.md5",
+}
+
+func generatedPatterns() []string {
+	if raw := os.Getenv("GENERATED_PATTERNS"); raw != "" {
+		return strings.Split(raw, ",")
+	}
+	return defaultGenerated
+}
+
+func isGenerated(path string, patterns []string) bool {
+	for _, p := range patterns {
+		if strings.Contains(path, strings.TrimSpace(p)) {
+			return true
+		}
+	}
+	return false
 }
 
 var labelColors = map[string]string{
@@ -62,8 +108,32 @@ func main() {
 		default:
 			return
 		}
+		// count only non-generated files when exclusion is enabled
+		// (EXCLUDE_GENERATED=false to disable) — a lockfile-only update
+		// shouldn't label a PR XL (#27)
 		changed := ev.PR.Additions + ev.PR.Deletions
-		label := sizeLabel(changed)
+		if os.Getenv("EXCLUDE_GENERATED") != "false" {
+			patterns := generatedPatterns()
+			if files, ferr := client.GetAll(fmt.Sprintf("/repos/%s/pulls/%d/files",
+				ev.Repo.FullName, ev.Number)); ferr == nil {
+				real := 0
+				for _, raw := range files {
+					var f struct {
+						Filename  string `json:"filename"`
+						Additions int    `json:"additions"`
+						Deletions int    `json:"deletions"`
+					}
+					if json.Unmarshal(raw, &f) != nil {
+						continue
+					}
+					if !isGenerated(f.Filename, patterns) {
+						real += f.Additions + f.Deletions
+					}
+				}
+				changed = real
+			}
+		}
+		label := sizeLabel(changed, tierBounds())
 
 		for name, color := range labelColors {
 			client.EnsureLabel(ev.Repo.FullName, name, color, "PR size")
