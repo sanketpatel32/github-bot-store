@@ -1,0 +1,48 @@
+name: bots — issues
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  first-touch-welcomer:
+    if: github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+      - run: go run ./bots/first-touch-welcomer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  duplicate-issue-hunter:
+    if: github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+      - run: go run ./bots/duplicate-issue-hunter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  keyword-issue-labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+      - run: go run ./bots/keyword-issue-labeler
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
