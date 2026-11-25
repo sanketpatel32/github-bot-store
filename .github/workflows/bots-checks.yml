@@ -1,0 +1,40 @@
+name: bots — checks
+
+on:
+  check_run:
+    types: [completed]
+  check_suite:
+    types: [completed]
+  status: {}
+
+permissions:
+  checks: read
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  ci-failure-commenter:
+    if: github.event_name != 'status'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+      - run: go run ./bots/ci-failure-commenter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-merger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+      - run: go run ./bots/auto-merger
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
