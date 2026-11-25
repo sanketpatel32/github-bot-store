@@ -6,12 +6,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
+	"strings"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
 )
 
-var conventional = regexp.MustCompile(`^(feat|fix|chore|docs|refactor|test|perf|ci|build|style|revert)(\(.+\))?!?: .+`)
+// titleRe builds the validation regex from configuration (#26):
+// ALLOWED_TYPES overrides the default type list, REQUIRE_SCOPE=true
+// makes the (scope) mandatory, and BREAKING=true/false controls whether
+// the ! marker is permitted.
+func titleRe() *regexp.Regexp {
+	types := os.Getenv("ALLOWED_TYPES")
+	if types == "" {
+		types = "feat,fix,chore,docs,refactor,test,perf,ci,build,style,revert"
+	}
+	typeAlt := strings.Join(strings.Split(types, ","), "|")
+	scope := `(\(.+\))?`
+	if os.Getenv("REQUIRE_SCOPE") == "true" {
+		scope = `(\(.+\))`
+	}
+	bang := "!?"
+	if os.Getenv("ALLOW_BREAKING") == "false" {
+		bang = ""
+	}
+	return regexp.MustCompile(`^(` + typeAlt + `)` + scope + bang + `: .+`)
+}
+
+var defaultTypes = "feat,fix,chore,docs,refactor,test,perf,ci,build,style,revert"
 
 type PREvent struct {
 	Action string `json:"action"`
@@ -45,11 +68,19 @@ func main() {
 			return
 		}
 
-		ok := conventional.MatchString(ev.PR.Title)
+		ok := titleRe().MatchString(ev.PR.Title)
 		state, desc := "success", "PR title follows conventional commits"
 		if !ok {
 			state = "failure"
-			desc = "Title must start with feat:, fix:, chore:, docs:, refactor:, test:, perf:..."
+			types := os.Getenv("ALLOWED_TYPES")
+			if types == "" {
+				types = defaultTypes
+			}
+			first := strings.Split(types, ",")[0]
+			desc = fmt.Sprintf("Title must look like '%s: description' (types: %s)", first, types)
+			if len(desc) > 140 {
+				desc = desc[:137] + "..."
+			}
 		}
 
 		path := fmt.Sprintf("/repos/%s/statuses/%s", ev.Repo.FullName, ev.PR.Head.SHA)
