@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an improvement or a new bot
+labels: [enhancement]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence — what should exist that doesn't?
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: Details
+      description: Use case, proposed behavior, configuration surface
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options: [new bot, improvement to existing bot, shared/platform, website/docs]

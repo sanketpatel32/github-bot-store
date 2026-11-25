@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a bot misbehaving
+labels: [bug]
+body:
+  - type: input
+    id: bot
+    attributes:
+      label: Bot name
+      description: Which bot (e.g. stale-bot, auto-merger)?
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did the bot do, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant log lines (redact tokens)
+      render: text
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How are you running it?
+      options: [webhook server, GitHub Actions, docker, other]
