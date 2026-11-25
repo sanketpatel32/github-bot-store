@@ -29,6 +29,11 @@ jobs:
       - name: unit tests with race detector
         run: go test -race ./...
 
+      - name: vulnerability scan
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
       - name: build all bots
         run: |
           set -e
