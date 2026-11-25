@@ -93,6 +93,31 @@
   .btn.primary { background: linear-gradient(135deg, #238636, #2ea043); border-color: transparent; }
   .btn.primary:hover { filter: brightness(1.12); border-color: transparent; }
 
+
+  /* ---------- hero animations ---------- */
+  @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+  .hero-inner > * { animation: rise .7s cubic-bezier(.2,.7,.3,1) both; }
+  .hero-inner > .pill { animation-delay: .05s; }
+  .hero-inner > h1 { animation-delay: .15s; }
+  .hero-inner > .tagline { animation-delay: .28s; }
+  .hero-inner > .stats { animation-delay: .4s; }
+  .hero-inner > .cta-row { animation-delay: .5s; }
+  .hero-inner > .term { animation-delay: .62s; }
+  h1 .grad {
+    background-size: 220% 100%;
+    animation: shimmer 5s linear infinite;
+  }
+  @keyframes shimmer { from { background-position: 0% 0; } to { background-position: 220% 0; } }
+  .hero .grid-lines { animation: griddrift 24s linear infinite; }
+  @keyframes griddrift { from { background-position: 0 0, 0 0; } to { background-position: 48px 48px, 48px 48px; } }
+  .stat .num { transition: transform .2s; }
+  .stat:hover .num { transform: scale(1.12); }
+  .caret { display: inline-block; width: 8px; height: 1.05em; background: var(--teal); vertical-align: text-bottom; animation: blink 1s steps(1) infinite; margin-left: 2px; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-inner > *, h1 .grad, .hero .grid-lines, .caret { animation: none !important; }
+  }
+
   /* ---------- terminal ---------- */
   .term {
     max-width: 720px; margin: 44px auto 0; text-align: left;
@@ -277,7 +302,7 @@
     <h1>GitHub automation,<br><span class="grad">small enough for any server</span></h1>
     <p class="tagline">32 single-binary bots in Go. Each idles at ~10MB of RAM — run the whole store on a $4 VPS, a Raspberry Pi, or that free-tier container you forgot about.</p>
     <div class="stats">
-      <div class="stat"><div class="num" id="botcount">15</div><div class="label">bots</div></div>
+      <div class="stat"><div class="num" id="botcount">0</div><div class="label">bots</div></div>
       <div class="stat"><div class="num">~5MB</div><div class="label">per binary</div></div>
       <div class="stat"><div class="num">~10MB</div><div class="label">RAM each</div></div>
       <div class="stat"><div class="num">0</div><div class="label">dependencies</div></div>
@@ -539,6 +564,81 @@ const BOTS = [
 
 const grid = document.getElementById("grid");
 const overlay = document.getElementById("overlay");
+
+// ---------- hero animations ----------
+// count-up the bot stat from the real catalog size
+(function () {
+  const el = document.getElementById("botcount");
+  if (!el) return;
+  const target = BOTS.length;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) { el.textContent = target; return; }
+  let cur = 0;
+  const t0 = performance.now();
+  const dur = 1100;
+  (function tick(t) {
+    const p = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(eased * target);
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+})();
+
+// terminal typing — lines appear char by char, comments instantly
+(function () {
+  const body = document.getElementById("termbody");
+  if (!body) return;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) return;
+  const original = body.innerHTML;
+  // snapshot the logical lines, then retype them
+  const lines = [];
+  body.childNodes.forEach(() => {});
+  const htmlLines = original.split("\n");
+  body.innerHTML = "";
+  let li = 0;
+  function typeLine() {
+    if (li >= htmlLines.length) {
+      const c = document.createElement("span");
+      c.className = "caret";
+      body.appendChild(c);
+      return;
+    }
+    const lineHtml = htmlLines[li++];
+    const div = document.createElement("div");
+    // preserve blank lines
+    if (!lineHtml.trim()) { div.innerHTML = "&nbsp;"; body.appendChild(div); typeLine(); return; }
+    body.appendChild(div);
+    const isComment = lineHtml.includes('class="c"');
+    const isOutput = lineHtml.startsWith('<span class="c">[');
+    if (isComment || isOutput) {
+      div.innerHTML = lineHtml;
+      setTimeout(typeLine, 90);
+      return;
+    }
+    // type command lines char by char over their text content
+    const tmp = document.createElement("div");
+    tmp.innerHTML = lineHtml;
+    const full = tmp.textContent;
+    let ci = 0;
+    (function typeChar() {
+      ci += 2;
+      div.textContent = full.slice(0, ci);
+      if (ci < full.length) {
+        setTimeout(typeChar, 18);
+      } else {
+        div.innerHTML = lineHtml; // restore syntax coloring
+        setTimeout(typeLine, 110);
+      }
+    })();
+  }
+  // start typing when the terminal scrolls into view (or immediately if visible)
+  const io = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) { io.disconnect(); typeLine(); }
+  }, { threshold: 0.25 });
+  io.observe(body);
+})();
+
 const modalContent = document.getElementById("modal-content");
 const emptyMsg = document.getElementById("empty");
 let activeFilter = "all";
