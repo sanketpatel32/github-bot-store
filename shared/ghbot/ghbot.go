@@ -5,10 +5,16 @@ package ghbot
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/hmac"
+	cryptorand "crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -345,6 +351,117 @@ func IsNotFound(err error) bool {
 	return false
 }
 
+// ---- GitHub App installation auth (#14) ----
+
+// appConfig holds GitHub App credentials when configured.
+type appConfig struct {
+	id             string
+	installationID string
+	key            *rsa.PrivateKey
+	mu             sync.Mutex
+	token          string
+	expiry         time.Time
+}
+
+var appCfg *appConfig
+
+func init() {
+	appID := os.Getenv("GITHUB_APP_ID")
+	instID := os.Getenv("GITHUB_APP_INSTALLATION_ID")
+	keyPEM := secretOrFile("GITHUB_APP_PRIVATE_KEY")
+	if appID == "" || instID == "" || keyPEM == "" {
+		return
+	}
+	block, _ := pem.Decode([]byte(keyPEM))
+	if block == nil {
+		log.Printf("github app: GITHUB_APP_PRIVATE_KEY is not valid PEM — ignoring app auth")
+		return
+	}
+	var key *rsa.PrivateKey
+	if k, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+		key = k
+	} else if pkcs8, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
+		if rsaKey, ok := pkcs8.(*rsa.PrivateKey); ok {
+			key = rsaKey
+		}
+	}
+	if key == nil {
+		log.Printf("github app: could not parse private key — ignoring app auth")
+		return
+	}
+	appCfg = &appConfig{id: appID, installationID: instID, key: key}
+}
+
+// appJWT mints a short-lived JWT signed with the app's private key (RS256).
+func (a *appConfig) appJWT() (string, error) {
+	now := time.Now()
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
+	claims := fmt.Sprintf(`{"iat":%d,"exp":%d,"iss":"%s"}`,
+		now.Add(-30*time.Second).Unix(), now.Add(9*time.Minute).Unix(), a.id)
+	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
+	unsigned := header + "." + payload
+	hash := sha256.Sum256([]byte(unsigned))
+	sig, err := rsa.SignPKCS1v15(cryptorand.Reader, a.key, crypto.SHA256, hash[:])
+	if err != nil {
+		return "", err
+	}
+	return unsigned + "." + base64.RawURLEncoding.EncodeToString(sig), nil
+}
+
+// installationToken returns a cached installation access token, minting a
+// new one when expired. Tokens live an hour; refresh 5 minutes early.
+func (a *appConfig) installationToken(hc *http.Client) (string, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.token != "" && time.Now().Before(a.expiry.Add(-5*time.Minute)) {
+		return a.token, nil
+	}
+	jwt, err := a.appJWT()
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("https://api.github.com/app/installations/%s/access_tokens", a.installationID), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := hc.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("mint installation token: %d: %.200s", resp.StatusCode, body)
+	}
+	var result struct {
+		Token     string    `json:"token"`
+		ExpiresAt time.Time `json:"expires_at"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
+	}
+	a.token, a.expiry = result.Token, result.ExpiresAt
+	log.Printf("github app: minted installation token, expires %s", result.ExpiresAt.Format(time.RFC3339))
+	return a.token, nil
+}
+
+// authToken resolves which token to use for a request: a GitHub App
+// installation token when app credentials are configured, otherwise the
+// static token.
+func (c *Client) authToken() string {
+	if appCfg != nil {
+		if tok, err := appCfg.installationToken(c.hc); err == nil {
+			return tok
+		} else {
+			log.Printf("github app auth failed (%v) — falling back to static token", err)
+		}
+	}
+	return c.Token
+}
+
 // Client is a minimal authenticated GitHub REST client.
 type Client struct {
 	Token string
@@ -377,7 +494,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Authorization", "Bearer "+c.authToken())
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	if payload != nil {
@@ -445,7 +562,7 @@ func (c *Client) GetAll(path string) ([]json.RawMessage, error) {
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("Authorization", "Bearer "+c.authToken())
 		req.Header.Set("Accept", "application/vnd.github+json")
 		resp, err := c.hc.Do(req)
 		if err != nil {
