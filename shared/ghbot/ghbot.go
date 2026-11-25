@@ -852,6 +852,51 @@ func jitterBackoff(attempt int) time.Duration {
 	return base + time.Duration(rand.Int63n(int64(base)))
 }
 
+// ---- GraphQL support (discussions, projects v2) ----
+
+// GraphQL executes a query against the GitHub GraphQL API and returns the
+// raw "data" payload. Needed for the few surfaces REST doesn't cover:
+// discussions and Projects v2.
+func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessage, error) {
+	payload := map[string]any{"query": query}
+	if variables != nil {
+		payload["variables"] = variables
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", apiBase()+"/graphql", bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.authToken())
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 300 {
+		return nil, &APIError{Method: "POST", Path: "/graphql", Status: resp.StatusCode, Body: string(body)}
+	}
+	var result struct {
+		Data   json.RawMessage `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+	if len(result.Errors) > 0 {
+		return nil, fmt.Errorf("graphql: %s", result.Errors[0].Message)
+	}
+	return result.Data, nil
+}
+
 // GetAll follows Link-header pagination and returns concatenated JSON array items
 // for list endpoints. Pass a path without per_page; it appends per_page=100.
 func (c *Client) GetAll(path string) ([]json.RawMessage, error) {
