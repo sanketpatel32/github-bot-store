@@ -1,3 +1,3 @@
 module github.com/sanketpatel32/github-bot-store
 
-go 1.22
+go 1.25
