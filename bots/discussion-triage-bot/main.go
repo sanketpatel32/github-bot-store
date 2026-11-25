@@ -27,9 +27,12 @@ type discussion struct {
 	} `json:"author"`
 }
 
-const query = `query($owner:String!, $repo:String!) {
+// oldest-first ordering: the bot only cares about discussions past the
+// grace age, so scanning oldest-first lets it stop the moment it reaches
+// fresh ones — correct and cheap at any discussion count (#138)
+const query = `query($owner:String!, $repo:String!, $cursor:String) {
   repository(owner:$owner, name:$repo) {
-    discussions(first:100, orderBy:{field:CREATED_AT, direction:DESC}) {
+    discussions(first:100, after:$cursor, orderBy:{field:CREATED_AT, direction:ASC}) {
       nodes {
         number
         title
@@ -38,6 +41,7 @@ const query = `query($owner:String!, $repo:String!) {
         comments { totalCount }
         author { login }
       }
+      pageInfo { hasNextPage endCursor }
     }
   }
 }`
@@ -48,32 +52,57 @@ func sweep(client *ghbot.Client, repo string, graceDays int) {
 		log.Printf("REPO must be owner/repo, got %q", repo)
 		return
 	}
-	data, err := client.GraphQL(query, map[string]any{"owner": parts[0], "repo": parts[1]})
-	if err != nil {
-		log.Printf("graphql: %v", err)
-		return
-	}
-	var result struct {
-		Repository struct {
-			Discussions struct {
-				Nodes []discussion `json:"nodes"`
-			} `json:"discussions"`
-		} `json:"repository"`
-	}
-	if err := json.Unmarshal(data, &result); err != nil {
-		log.Printf("parse: %v", err)
-		return
-	}
-
 	now := time.Now()
 	stale := 0
-	for _, d := range result.Repository.Discussions.Nodes {
-		unanswered := !d.Answered && d.Comments.TotalCount == 0
-		old := now.Sub(d.CreatedAt) > time.Duration(graceDays)*24*time.Hour
-		if unanswered && old {
-			stale++
-			log.Printf("discussion #%d %q unanswered for %d+ days", d.Number, d.Title, graceDays)
+	var staleList []discussion
+	cutoff := time.Duration(graceDays) * 24 * time.Hour
+	// paginate — without cursors only the first page was ever scanned, and
+	// with the old newest-first ordering precisely the stale threads the bot
+	// exists to find were the ones cut off (#138)
+	var cursor *string
+scan:
+	for {
+		vars := map[string]any{"owner": parts[0], "repo": parts[1]}
+		if cursor != nil {
+			vars["cursor"] = *cursor
 		}
+		data, err := client.GraphQL(query, vars)
+		if err != nil {
+			log.Printf("graphql: %v", err)
+			return
+		}
+		var result struct {
+			Repository struct {
+				Discussions struct {
+					Nodes    []discussion `json:"nodes"`
+					PageInfo struct {
+						HasNextPage bool   `json:"hasNextPage"`
+						EndCursor   string `json:"endCursor"`
+					} `json:"pageInfo"`
+				} `json:"discussions"`
+			} `json:"repository"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			log.Printf("parse: %v", err)
+			return
+		}
+		for _, d := range result.Repository.Discussions.Nodes {
+			if now.Sub(d.CreatedAt) <= cutoff {
+				// oldest-first: once we reach fresh discussions there is
+				// nothing stale beyond this point
+				break scan
+			}
+			if !d.Answered && d.Comments.TotalCount == 0 {
+				stale++
+				staleList = append(staleList, d)
+				log.Printf("discussion #%d %q unanswered for %d+ days", d.Number, d.Title, graceDays)
+			}
+		}
+		if !result.Repository.Discussions.PageInfo.HasNextPage {
+			break
+		}
+		c := result.Repository.Discussions.PageInfo.EndCursor
+		cursor = &c
 	}
 
 	// post/update one tracking issue rather than touching each discussion —
@@ -86,11 +115,8 @@ func sweep(client *ghbot.Client, repo string, graceDays int) {
 		sb.WriteString("✅ No stale unanswered discussions.\n")
 	} else {
 		fmt.Fprintf(&sb, "**%d discussions** have no replies after %d days:\n\n", stale, graceDays)
-		for _, d := range result.Repository.Discussions.Nodes {
-			if !d.Answered && d.Comments.TotalCount == 0 &&
-				now.Sub(d.CreatedAt) > time.Duration(graceDays)*24*time.Hour {
-				fmt.Fprintf(&sb, "- #%d %s (by @%s)\n", d.Number, d.Title, d.Author.Login)
-			}
+		for _, d := range staleList {
+			fmt.Fprintf(&sb, "- #%d %s (by @%s)\n", d.Number, d.Title, d.Author.Login)
 		}
 		sb.WriteString("\n_This issue updates itself on each sweep._")
 	}
