@@ -4,6 +4,11 @@ bots:
   - name: pr-size-labeler
     port: 8101
     type: webhook
+    # arbitrary per-bot settings — required inputs like PROJECT_OWNER and
+    # PROJECT_NUMBER for project-board-sync go here (#118):
+    # env:
+    #   PROJECT_OWNER: yourorg
+    #   PROJECT_NUMBER: "3"
   - name: auto-merger
     port: 8110
     type: webhook

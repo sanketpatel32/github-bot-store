@@ -35,6 +35,10 @@ spec:
             - name: REPO
               value: "{{ .repo }}"
             {{- end }}
+            {{- range $k, $v := .env }}
+            - name: {{ $k }}
+              value: "{{ $v }}"
+            {{- end }}
             {{- if $.Values.spool.enabled }}
             - name: SPOOL_DIR
               value: /spool
