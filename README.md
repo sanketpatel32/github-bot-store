@@ -33,6 +33,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [breaking-change-guard](bots/breaking-change-guard) | Requires acknowledgment of breaking changes | webhook |
 | [release-reminder](bots/release-reminder) | Reminds you when unreleased commits pile up | cron |
 | [docs-link-checker](bots/docs-link-checker) | Finds dead links in markdown docs | cron |
+| [issue-link-checker](bots/issue-link-checker) | Flags dead links in issue reports | webhook |
 
 ## Automations
 

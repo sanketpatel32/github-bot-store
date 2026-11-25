@@ -420,6 +420,10 @@ const BOTS = [
     desc: "Scans your markdown for dead links — one self-updating issue lists them, closes itself when fixed.",
     events: "none (scheduled)", perms: "contents: read, issues: write",
     notes: ["Concurrent link checking with per-URL caching", "HEAD-then-GET fallback for picky servers"] },
+  { name: "issue-link-checker", emoji: "🔍", type: "webhook", port: 8126, accent: "#a371f7",
+    desc: "Validates external links in new issues — one comment flags dead repro links before triage wastes time on them.",
+    events: "Issues", perms: "issues: write",
+    notes: ["Skips github.com links to save rate quota", "Edits re-check, comment updates in place"] },
 ];
 
 const grid = document.getElementById("grid");
