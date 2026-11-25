@@ -361,6 +361,13 @@ func secretOrFile(name string) string {
 }
 
 func LoadConfig(botName, defaultPort string) Config {
+	// version needs no configuration at all — a freshly downloaded binary
+	// must answer `<bot> version` even with no token in sight, otherwise the
+	// very first thing a new user tries fails
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Printf("%s %s\n", botName, Version)
+		os.Exit(0)
+	}
 	cfg := Config{
 		Token:  secretOrFile("GITHUB_TOKEN"),
 		Secret: secretOrFile("WEBHOOK_SECRET"),
