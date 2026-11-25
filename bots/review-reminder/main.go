@@ -57,15 +57,43 @@ func sweep(client *ghbot.Client, repo string, waitHours int) {
 			continue
 		}
 
-		// has the PR been waiting long enough? use last update as baseline
-		var prDetail struct {
-			UpdatedAt time.Time `json:"updated_at"`
-		}
-		detail, err := client.Do("GET", fmt.Sprintf("/repos/%s/pulls/%d", repo, pr.Number), nil)
-		if err != nil || json.Unmarshal(detail, &prDetail) != nil {
+		// how long has each reviewer actually been waiting? updated_at is
+		// wrong — new commits and edits reset it while the review request
+		// keeps aging. The timeline's review_requested events carry the real
+		// request timestamps (#134).
+		timeline, err := client.GetAll(fmt.Sprintf("/repos/%s/issues/%d/timeline", repo, pr.Number))
+		if err != nil {
 			continue
 		}
-		if now.Sub(prDetail.UpdatedAt) < time.Duration(waitHours)*time.Hour {
+		requestedAt := map[string]time.Time{}
+		for _, traw := range timeline {
+			var t struct {
+				Event     string    `json:"event"`
+				CreatedAt time.Time `json:"created_at"`
+				Reviewer  struct {
+					Login string `json:"login"`
+				} `json:"requested_reviewer"`
+			}
+			if json.Unmarshal(traw, &t) != nil {
+				continue
+			}
+			// latest request wins — re-requests restart the clock
+			if t.Event == "review_requested" && t.Reviewer.Login != "" {
+				requestedAt[t.Reviewer.Login] = t.CreatedAt
+			}
+		}
+		waiting := false
+		for _, u := range rr.Users {
+			at, ok := requestedAt[u.Login]
+			if !ok {
+				at = now // never formally requested via events — treat as fresh
+			}
+			if now.Sub(at) >= time.Duration(waitHours)*time.Hour {
+				waiting = true
+				break
+			}
+		}
+		if !waiting {
 			continue
 		}
 
@@ -84,7 +112,7 @@ func sweep(client *ghbot.Client, repo string, waitHours int) {
 				if json.Unmarshal(craw, &c) != nil {
 					continue
 				}
-				if strings.Contains(c.Body, marker) && strings.Contains(c.Body, "@"+u.Login) {
+				if strings.Contains(c.Body, marker) && mentionsUser(c.Body, u.Login) {
 					reminded = true
 					break
 				}
@@ -104,6 +132,28 @@ func sweep(client *ghbot.Client, repo string, waitHours int) {
 			"%s\n%s — this PR has been waiting %d+ hours for review. Friendly nudge. 🙂",
 			marker, strings.Join(mentions, " "), waitHours))
 		log.Printf("PR #%d: reminded %v", pr.Number, pending)
+	}
+}
+
+// mentionsUser reports whether body contains @login as a complete mention —
+// substring matching makes a reminder for @bob suppress the one owed to
+// @bobsmith (#134).
+func mentionsUser(body, login string) bool {
+	needle := "@" + login
+	for idx := 0; ; {
+		i := strings.Index(body[idx:], needle)
+		if i == -1 {
+			return false
+		}
+		pos := idx + i + len(needle)
+		if pos >= len(body) {
+			return true
+		}
+		c := body[pos]
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' {
+			return true
+		}
+		idx = pos
 	}
 }
 
