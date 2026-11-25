@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/pr-size-labeler.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/first-touch-welcomer.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/stale-bot.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/branch-sweeper.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/conventional-pr-check.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/reviewer-assigner.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/duplicate-issue-hunter.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/todo-tracker.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/merge-conflict-detector.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/auto-merger.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/repo-digest.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/pr-template-checker.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/release-drafter.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/keyword-issue-labeler.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/ci-failure-commenter.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/pr-aging-bot.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/review-reminder.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/issue-triage-reminder.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/changelog-checker.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/license-header-checker.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/pr-path-labeler.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/contributor-milestones.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/breaking-change-guard.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/release-reminder.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/docs-link-checker.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/issue-link-checker.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/issue-form-validator.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/dependency-update-grouper.html</loc></url>
+  <url><loc>https://sanketpatel32.github.io/github-bot-store/bots/flaky-test-tracker.html</loc></url>
+</urlset>

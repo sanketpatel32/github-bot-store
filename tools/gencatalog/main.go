@@ -8,12 +8,16 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 )
+
+//go:embed botpage.html
+var botPage string
 
 type bot struct {
 	Name   string   `json:"name"`
@@ -103,5 +107,22 @@ func main() {
 		out = append(out, line)
 	}
 	os.WriteFile("README.md", []byte(strings.Join(out, "\n")), 0o644)
-	fmt.Printf("catalog regenerated: %d bots\n", len(bots))
+	// static per-bot detail pages with SEO/social metadata (#84)
+	os.MkdirAll("docs/bots", 0o755)
+	for _, b := range bots {
+		var notes strings.Builder
+		for _, n := range b.Notes {
+			notes.WriteString("<li>" + n + "</li>")
+		}
+		page := strings.ReplaceAll(botPage, "{{NAME}}", b.Name)
+		page = strings.ReplaceAll(page, "{{EMOJI}}", b.Emoji)
+		page = strings.ReplaceAll(page, "{{DESC}}", b.Desc)
+		page = strings.ReplaceAll(page, "{{EVENTS}}", b.Events)
+		page = strings.ReplaceAll(page, "{{PERMS}}", b.Perms)
+		page = strings.ReplaceAll(page, "{{TYPE}}", b.Type)
+		page = strings.ReplaceAll(page, "{{NOTES}}", notes.String())
+		page = strings.ReplaceAll(page, "{{PORT}}", fmt.Sprint(b.Port))
+		os.WriteFile("docs/bots/"+b.Name+".html", []byte(page), 0o644)
+	}
+	fmt.Printf("catalog regenerated: %d bots (+ static detail pages)\n", len(bots))
 }

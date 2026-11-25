@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta property="og:title" content="github-bot-store — tiny self-hosted GitHub automation bots">
+<meta property="og:description" content="29 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GitHub Bot Store — tiny self-hosted automation</title>
 <style>
@@ -547,7 +551,10 @@ function openModal(bot) {
     <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
 
     <h4>Links</h4>
-    <ul><li><a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">Source &amp; full README →</a></li></ul>`;
+    <ul>
+      <li><a href="bots/${bot.name}.html">Static detail page (shareable link) →</a></li>
+      <li><a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">Source &amp; full README →</a></li>
+    </ul>`;
   overlay.classList.add("open");
   document.body.style.overflow = "hidden";
   document.getElementById("close").focus();

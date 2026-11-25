@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>branch-sweeper — github-bot-store</title>
+<meta name="description" content="Deletes the head branch automatically when a PR is merged.">
+<meta property="og:title" content="branch-sweeper — a tiny self-hosted GitHub bot">
+<meta property="og:description" content="Deletes the head branch automatically when a PR is merged.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sanketpatel32.github.io/github-bot-store/bots/branch-sweeper.html">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://sanketpatel32.github.io/github-bot-store/bots/branch-sweeper.html">
+<style>
+  body { background:#0d1117; color:#e6edf3; font-family:system-ui,sans-serif; max-width:680px; margin:60px auto; padding:0 24px; line-height:1.6 }
+  h1 { font-family:ui-monospace,monospace }
+  .meta { color:#7d8590 }
+  code { background:rgba(110,118,129,.18); padding:1px 6px; border-radius:4px }
+  a { color:#58a6ff }
+  ul { color:#7d8590 }
+  .back { font-size:.9rem }
+</style>
+</head>
+<body>
+<p class="back"><a href="../index.html">← all bots</a></p>
+<h1>🧹 branch-sweeper</h1>
+<p>Deletes the head branch automatically when a PR is merged.</p>
+<p class="meta">type: <b>webhook</b> · port <code>8104</code> · events: Pull requests · permissions: <code>contents: write</code></p>
+<h3>Notes</h3>
+<ul><li>Never touches forks or protected branches (main, develop, release…)</li></ul>
+<h3>Install</h3>
+<ul>
+<li><a href="https://github.com/sanketpatel32/github-bot-store/releases/latest">Prebuilt binaries</a> — linux amd64+arm64, with checksums</li>
+<li><a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/branch-sweeper">Source and full README</a></li>
+<li>Zero servers: run as a GitHub Action — see <code>.github/workflows/bots-*.yml</code> in the repo</li>
+</ul>
+</body>
+</html>

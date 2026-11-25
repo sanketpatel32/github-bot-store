@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sanketpatel32.github.io/github-bot-store/sitemap.xml
