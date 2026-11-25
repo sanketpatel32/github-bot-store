@@ -286,6 +286,14 @@
         <button class="fpill active" data-f="all">All</button>
         <button class="fpill" data-f="webhook">Webhook</button>
         <button class="fpill" data-f="cron">Cron</button>
+        <select id="permfilter" aria-label="Filter by permission" style="margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-family:var(--mono);font-size:.8rem">
+          <option value="">any permissions</option>
+          <option value="issues: write">issues: write</option>
+          <option value="pulls: read">pulls: read</option>
+          <option value="statuses: write">statuses: write</option>
+          <option value="checks: read">checks: read</option>
+          <option value="contents">contents</option>
+        </select>
         <input id="search" type="text" placeholder="Search… try 'merge' or 'label'">
       </div>
     </div>
@@ -453,6 +461,8 @@ function render() {
   let shown = 0;
   for (const bot of BOTS) {
     if (activeFilter !== "all" && bot.type !== activeFilter) continue;
+    const perm = document.getElementById("permfilter").value;
+    if (perm && !bot.perms.includes(perm.replace(/\s/g,""))) continue;
     const q = query.toLowerCase();
     if (q && !bot.name.includes(q) && !bot.desc.toLowerCase().includes(q)) continue;
     shown++;
@@ -466,7 +476,7 @@ function render() {
         <span class="port">:${bot.port}</span>
       </div>
       <p>${bot.desc}</p>
-      <div class="meta"><span class="tag ${bot.type}">${bot.type}</span></div>`;
+      <div class="meta"><span class="tag ${bot.type}">${bot.type}</span><span class="tag" style="opacity:.65;font-size:.68rem">${bot.perms.split(",")[0]}</span></div>`;
     card.tabIndex = 0;
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `${bot.name} — open details`);
@@ -553,6 +563,7 @@ document.querySelectorAll(".fpill").forEach(p => {
   };
 });
 document.getElementById("search").addEventListener("input", (e) => { query = e.target.value; render(); });
+document.getElementById("permfilter").addEventListener("change", render);
 
 document.querySelector(".copy-btn").onclick = (e) => {
   const text = document.getElementById("termbody").innerText.replace(/^[$#].*?\n?/gm, "").trim();
