@@ -400,6 +400,10 @@ const BOTS = [
     desc: "Fails PRs whose new source files lack a license header — one managed comment lists exactly which files.",
     events: "Pull requests", perms: "statuses: write, pulls: read, issues: write",
     notes: ["HEADER_TEXT and SOURCE_EXTENSIONS configurable", "Only checks newly added files, not existing ones"] },
+  { name: "pr-path-labeler", emoji: "🗂", type: "webhook", port: 8121, accent: "#d29922",
+    desc: "Labels PRs by which directories they touch — area/frontend, area/backend — using your repo's existing labels.",
+    events: "Pull requests", perms: "pulls: read, issues: write",
+    notes: ["Optional path-labels.json for explicit prefix→label mapping", "Never invents labels — only applies ones that already exist"] },
 ];
 
 const grid = document.getElementById("grid");
