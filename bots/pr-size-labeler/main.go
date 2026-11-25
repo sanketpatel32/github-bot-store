@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
 )
@@ -67,11 +68,47 @@ func main() {
 		for name, color := range labelColors {
 			client.EnsureLabel(ev.Repo.FullName, name, color, "PR size")
 		}
-		if err := client.AddLabels(ev.Repo.FullName, ev.Number, []string{label}); err != nil {
-			log.Printf("label: %v", err)
+
+		// remove obsolete size/* labels only — unrelated labels are untouched,
+		// and if the tier is unchanged we skip all writes
+		body, err := client.Do("GET", fmt.Sprintf("/repos/%s/issues/%d/labels?per_page=100",
+			ev.Repo.FullName, ev.Number), nil)
+		if err != nil {
+			log.Printf("labels fetch: %v", err)
 			return
 		}
-		log.Printf("PR #%d: +%d/-%d -> %s", ev.Number, ev.PR.Additions, ev.PR.Deletions, label)
+		var current []struct {
+			Name string `json:"name"`
+		}
+		json.Unmarshal(body, &current)
+		hasCorrect := false
+		var obsolete []string
+		for _, l := range current {
+			if !strings.HasPrefix(l.Name, "size/") {
+				continue
+			}
+			if l.Name == label {
+				hasCorrect = true
+			} else {
+				obsolete = append(obsolete, l.Name)
+			}
+		}
+		for _, old := range obsolete {
+			client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/%s",
+				ev.Repo.FullName, ev.Number, old), nil)
+		}
+		if hasCorrect && len(obsolete) == 0 {
+			log.Printf("PR #%d: already %s, no writes", ev.Number, label)
+			return
+		}
+		if !hasCorrect {
+			if err := client.AddLabels(ev.Repo.FullName, ev.Number, []string{label}); err != nil {
+				log.Printf("label: %v", err)
+				return
+			}
+		}
+		log.Printf("PR #%d: +%d/-%d -> %s (removed %d obsolete)", ev.Number,
+			ev.PR.Additions, ev.PR.Deletions, label, len(obsolete))
 
 		if label == "size/XL" {
 			client.Comment(ev.Repo.FullName, ev.Number, fmt.Sprintf(
