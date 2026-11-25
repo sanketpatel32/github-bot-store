@@ -12,28 +12,41 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
 )
 
-func envInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
+// envIntValidated parses a positive integer env var. Zero, negative, or
+// malformed values are fatal with a helpful message — silently falling back
+// would hide configuration mistakes that change destructive behavior.
+func envIntValidated(key string, fallback, min, max int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
 	}
-	return fallback
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		log.Fatalf("%s=%q is not a number — expected an integer between %d and %d", key, v, min, max)
+	}
+	if n < min || n > max {
+		log.Fatalf("%s=%d out of range — expected between %d and %d", key, n, min, max)
+	}
+	return n
 }
 
 type issue struct {
 	Number    int       `json:"number"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Draft     bool      `json:"draft"`
 	Labels    []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
-	PullRequest *struct{} `json:"pull_request"`
+	Assignees   []struct{} `json:"assignees"`
+	Milestone   *struct{}  `json:"milestone"`
+	PullRequest *struct{}  `json:"pull_request"`
 }
 
 func hasLabel(i issue, name string) bool {
@@ -82,7 +95,32 @@ func (s *state) save() {
 	}
 }
 
-func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays int) {
+type options struct {
+	exemptLabels    map[string]bool
+	exemptAssigned  bool
+	exemptMilestone bool
+	exemptDraftPRs  bool
+	dryRun          bool
+}
+
+func loadOptions() options {
+	o := options{
+		exemptLabels:    map[string]bool{},
+		exemptAssigned:  os.Getenv("EXEMPT_ASSIGNED") == "true",
+		exemptMilestone: os.Getenv("EXEMPT_MILESTONE") == "true",
+		exemptDraftPRs:  os.Getenv("EXEMPT_DRAFT_PRS") != "false", // drafts exempt by default
+		dryRun:          os.Getenv("DRY_RUN") == "true",
+	}
+	for _, l := range strings.Split(os.Getenv("EXEMPT_LABELS"), ",") {
+		if l = strings.TrimSpace(l); l != "" {
+			o.exemptLabels[l] = true
+		}
+	}
+	o.exemptLabels["pinned"] = true // pinned is always exempt
+	return o
+}
+
+func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays int, opts options) {
 	items, err := client.GetAll(fmt.Sprintf("/repos/%s/issues?state=open", repo))
 	if err != nil {
 		log.Printf("list issues: %v", err)
@@ -110,6 +148,10 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 			// genuine activity since we marked it? (our marking comment lands
 			// within seconds of markedAt; anything comfortably after is real)
 			if i.UpdatedAt.After(markedAt.Add(2 * time.Minute)) {
+				if opts.dryRun {
+					log.Printf("[dry-run] would un-stale %s #%d", kind, i.Number)
+					continue
+				}
 				client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/stale", repo, i.Number), nil)
 				delete(st.Marked, i.Number)
 				st.save()
@@ -117,6 +159,10 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 				continue
 			}
 			if now.Sub(markedAt) >= time.Duration(closeDays)*24*time.Hour {
+				if opts.dryRun {
+					log.Printf("[dry-run] would close %s #%d", kind, i.Number)
+					continue
+				}
 				client.Comment(repo, i.Number,
 					"Closing due to inactivity. Happy to reopen if there's interest — just comment.")
 				client.Do("PATCH", fmt.Sprintf("/repos/%s/issues/%d", repo, i.Number),
@@ -128,17 +174,39 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 			continue
 		}
 
+		// exemptions — configurable labels, assignees, milestones, draft PRs
+		exempt := false
+		for _, l := range i.Labels {
+			if opts.exemptLabels[l.Name] {
+				exempt = true
+			}
+		}
+		if opts.exemptAssigned && len(i.Assignees) > 0 {
+			exempt = true
+		}
+		if opts.exemptMilestone && i.Milestone != nil {
+			exempt = true
+		}
+		if opts.exemptDraftPRs && i.PullRequest != nil && i.Draft {
+			exempt = true
+		}
+		if exempt {
+			continue
+		}
+
 		// not marked — is it inactive long enough? (client-side filter; the
 		// API `since` param selects *recently updated* items, the opposite)
-		if hasLabel(i, "pinned") || hasLabel(i, "stale") {
-			if hasLabel(i, "stale") {
-				// labeled stale externally — adopt it into state
-				st.Marked[i.Number] = i.UpdatedAt
-				st.save()
-			}
+		if hasLabel(i, "stale") {
+			// labeled stale externally — adopt it into state
+			st.Marked[i.Number] = i.UpdatedAt
+			st.save()
 			continue
 		}
 		if i.UpdatedAt.Before(staleCutoff) {
+			if opts.dryRun {
+				log.Printf("[dry-run] would mark %s #%d stale", kind, i.Number)
+				continue
+			}
 			client.EnsureLabel(repo, "stale", "ededed", "Inactive — will close without activity")
 			client.AddLabels(repo, i.Number, []string{"stale"})
 			client.Comment(repo, i.Number, fmt.Sprintf(
@@ -160,15 +228,19 @@ func main() {
 	if repo == "" {
 		log.Fatal("REPO (owner/name) env var is required")
 	}
-	staleDays := envInt("STALE_DAYS", 30)
-	closeDays := envInt("CLOSE_AFTER_DAYS", 7)
-	intervalHours := envInt("SWEEP_INTERVAL_HOURS", 12)
+	staleDays := envIntValidated("STALE_DAYS", 30, 1, 365)
+	closeDays := envIntValidated("CLOSE_AFTER_DAYS", 7, 1, 90)
+	intervalHours := envIntValidated("SWEEP_INTERVAL_HOURS", 12, 1, 168)
+	opts := loadOptions()
+	if opts.dryRun {
+		log.Printf("DRY_RUN enabled — logging actions without writing to GitHub")
+	}
 	st := loadState("stale-state.json")
 
 	go func() {
 		for {
 			log.Printf("sweeping %s (stale>%dd, close after %dd marked)", repo, staleDays, closeDays)
-			sweep(client, repo, st, staleDays, closeDays)
+			sweep(client, repo, st, staleDays, closeDays, opts)
 			time.Sleep(time.Duration(intervalHours) * time.Hour)
 		}
 	}()
