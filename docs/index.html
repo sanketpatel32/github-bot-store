@@ -428,6 +428,10 @@ const BOTS = [
     desc: "Enforces your issue template — labels issues missing required sections, auto-clears when they fix it.",
     events: "Issues", perms: "issues: write",
     notes: ["REQUIRED_SECTIONS configures which headings must be filled", "Rejects placeholder content, not just empty sections"] },
+  { name: "dependency-update-grouper", emoji: "📦", type: "webhook", port: 8128, accent: "#58a6ff",
+    desc: "Labels dependabot/renovate PRs patch/minor/major from semver in the title — batch the safe ones, review the rest.",
+    events: "Pull requests", perms: "pulls: read, issues: write",
+    notes: ["Exactly one deps/* label per PR", "Pairs well with auto-merger: auto-merge deps/patch only"] },
 ];
 
 const grid = document.getElementById("grid");

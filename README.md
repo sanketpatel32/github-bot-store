@@ -35,6 +35,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [docs-link-checker](bots/docs-link-checker) | Finds dead links in markdown docs | cron |
 | [issue-link-checker](bots/issue-link-checker) | Flags dead links in issue reports | webhook |
 | [issue-form-validator](bots/issue-form-validator) | Enforces issue template completeness | webhook |
+| [dependency-update-grouper](bots/dependency-update-grouper) | Classifies dependency PRs by semver bump | webhook |
 
 ## Automations
 
