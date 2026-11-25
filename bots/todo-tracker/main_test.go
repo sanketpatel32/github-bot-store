@@ -43,3 +43,16 @@ func TestMarkerRoundtrip(t *testing.T) {
 		t.Error("hash should differ by file")
 	}
 }
+
+func TestScannable(t *testing.T) {
+	for _, yes := range []string{"main.go", "src/app.ts", "x.py", ".github/workflows/ci.yml"} {
+		if !scannable(yes) {
+			t.Errorf("%s should be scannable", yes)
+		}
+	}
+	for _, no := range []string{"docs/bots/todo-tracker.html", "README.md", "go.sum", "manifest.json"} {
+		if scannable(no) {
+			t.Errorf("%s should NOT be scannable — false positive source", no)
+		}
+	}
+}

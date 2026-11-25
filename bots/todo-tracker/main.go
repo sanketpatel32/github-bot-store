@@ -45,6 +45,24 @@ func todoHash(file, text string) string {
 	return hex.EncodeToString(h[:])[:8]
 }
 
+// scannable reports whether a file is source/config prose where TODO
+// comments are meaningful. Generated catalog pages (docs/bots/*.html) and
+// markdown cause false positives — the bots' own descriptions mention
+// TODO/FIXME as words, which the todo-tracker then "found" in itself.
+func scannable(path string) bool {
+	for _, skip := range []string{".html", ".md", ".json", ".svg", ".png", ".lock", ".sum"} {
+		if strings.HasSuffix(path, skip) {
+			return false
+		}
+	}
+	for _, ext := range []string{".go", ".js", ".ts", ".py", ".java", ".c", ".h", ".cpp", ".rs", ".rb", ".sh", ".yml", ".yaml", ".toml"} {
+		if strings.HasSuffix(path, ext) {
+			return true
+		}
+	}
+	return false
+}
+
 // parsePatch extracts added and removed TODOs from a unified diff patch.
 // Handles truncated patches gracefully (they just yield fewer lines) and
 // renamed files (caller passes the current filename).
@@ -134,6 +152,9 @@ func main() {
 			for _, f := range detail.Files {
 				if f.Patch == "" {
 					continue // truncated or binary — skip rather than guess
+				}
+				if !scannable(f.Filename) {
+					continue
 				}
 				added, removed := parsePatch(f.Patch)
 
