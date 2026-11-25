@@ -67,6 +67,15 @@ var dedupe = struct {
 	order []string
 }{ids: map[string]bool{}}
 
+// unseeDelivery forgets a delivery ID — used when admission fails after the
+// dedupe check (e.g. workers saturated), so GitHub's redelivery is not
+// silently swallowed by the cache (#102).
+func unseeDelivery(id string) {
+	dedupe.Lock()
+	defer dedupe.Unlock()
+	delete(dedupe.ids, id)
+}
+
 // seenDelivery records a delivery ID; true if it was already seen.
 func seenDelivery(id string) bool {
 	if id == "" {
@@ -608,8 +617,9 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			}
 		}
 		if !dispatch(job) {
-			// workers saturated — 429 tells GitHub to retry later instead of
-			// dropping the event silently
+			// workers saturated — forget the dedupe record so the redelivery
+			// this 429 triggers is actually processed (#102)
+			unseeDelivery(deliveryID)
 			http.Error(w, "busy — retry", http.StatusTooManyRequests)
 			return
 		}
