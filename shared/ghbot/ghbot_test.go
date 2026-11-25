@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"strings"
 	"sync"
 	"testing"
@@ -127,5 +128,23 @@ func TestGraphQLDryRunBlocksMutations(t *testing.T) {
 	}
 	if !strings.Contains(string(res), "dryRun") {
 		t.Errorf("mutation should short-circuit, got %s", res)
+	}
+}
+
+func TestBotSenderAllowlist(t *testing.T) {
+	// regression for the unmarshal-ordering fix: the allowlist must compare
+	// against the parsed sender, not the zero-value struct
+	body := []byte(`{"sender":{"type":"Bot","login":"dependabot[bot]"}}`)
+	var meta struct {
+		Sender struct {
+			Type  string `json:"type"`
+			Login string `json:"login"`
+		} `json:"sender"`
+	}
+	if err := json.Unmarshal(body, &meta); err != nil {
+		t.Fatal(err)
+	}
+	if meta.Sender.Login != "dependabot[bot]" {
+		t.Fatalf("sender parse broken: %q", meta.Sender.Login)
 	}
 }

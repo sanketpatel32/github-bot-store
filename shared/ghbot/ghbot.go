@@ -583,14 +583,15 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			if allow == "" {
 				allow = "dependabot[bot],renovate[bot],github-actions[bot]"
 			}
+			parsed := json.Unmarshal(body, &meta) == nil
 			allowed := false
 			for _, a := range strings.Split(allow, ",") {
-				if strings.TrimSpace(a) == meta.Sender.Login {
+				if strings.TrimSpace(a) != "" && strings.TrimSpace(a) == meta.Sender.Login {
 					allowed = true
 					break
 				}
 			}
-			if json.Unmarshal(body, &meta) == nil && !allowed &&
+			if parsed && !allowed &&
 				(meta.Sender.Type == "Bot" || strings.HasSuffix(meta.Sender.Login, "[bot]")) {
 				log.Printf("[%s] skipping bot-authored %s event from %s", name, event, meta.Sender.Login)
 				w.WriteHeader(http.StatusAccepted)
