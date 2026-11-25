@@ -68,6 +68,12 @@ func scannable(path string) bool {
 			return false
 		}
 	}
+	// test files legitimately contain TODO/FIXME as fixture data — scanning
+	// them files issues about the scanner's own test corpus (#147, #148)
+	if strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/testdata/") ||
+		strings.HasSuffix(path, "_test.py") || strings.Contains(path, "/tests/") {
+		return false
+	}
 	for _, ext := range []string{".go", ".js", ".ts", ".py", ".java", ".c", ".h", ".cpp", ".rs", ".rb", ".sh", ".yml", ".yaml", ".toml"} {
 		if strings.HasSuffix(path, ext) {
 			return true
