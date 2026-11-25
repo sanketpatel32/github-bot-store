@@ -320,7 +320,22 @@
   </div>
 </div>
 
-<footer>
+
+  <section id="generator" style="max-width:720px;margin:60px auto 0;padding:0 24px 40px">
+    <h3 style="font-family:var(--mono);margin-bottom:6px">⚙️ config generator</h3>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:14px">Pick a bot and a deployment style — get a ready-to-paste configuration.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <select id="genbot" style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)"></select>
+      <select id="genmode" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)">
+        <option value="binary">binary + systemd</option>
+        <option value="docker">docker compose</option>
+        <option value="action">github action (zero servers)</option>
+      </select>
+    </div>
+    <div class="codewrap" style="position:relative"><button class="mcopy" id="gencopy">copy</button><pre id="genout" style="min-height:120px;white-space:pre-wrap"></pre></div>
+  </section>
+
+  <footer>
   <div class="container">
     Built with Go and zero dependencies · <a href="https://github.com/sanketpatel32/github-bot-store">sanketpatel32/github-bot-store</a>
   </div>
@@ -574,6 +589,85 @@ document.querySelector(".copy-btn").onclick = (e) => {
 };
 
 render();
+
+// ---------- config generator (#83) ----------
+const genbot = document.getElementById("genbot");
+const genmode = document.getElementById("genmode");
+const genout = document.getElementById("genout");
+for (const b of BOTS) {
+  const o = document.createElement("option");
+  o.value = b.name;
+  o.textContent = `${b.emoji} ${b.name}`;
+  genbot.appendChild(o);
+}
+function renderGen() {
+  const bot = BOTS.find(b => b.name === genbot.value) || BOTS[0];
+  const mode = genmode.value;
+  const isCron = bot.type === "cron";
+  let out = "";
+  if (mode === "binary") {
+    out = `# 1. download + verify
+curl -L https://github.com/sanketpatel32/github-bot-store/releases/latest/download/${bot.name}-linux-amd64.tar.gz | tar xz
+sha256sum -c checksums.txt --ignore-missing
+
+# 2. configure (systemd Environment= lines or export)
+GITHUB_TOKEN${"_FILE"}=/run/secrets/github_token
+${isCron ? `REPO=owner/repo` : `WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret`}
+ALLOWED_REPOS=owner/repo
+SPOOL_DIR=/var/lib/ghbot
+PORT=${bot.port}
+
+# 3. run — see deploy/systemd-example.service for a hardened unit
+./${bot.name}-linux-amd64`;
+  } else if (mode === "docker") {
+    out = `# docker-compose.yml snippet
+services:
+  ${bot.name}:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args: { BOT: ${bot.name} }
+    environment:
+      GITHUB_TOKEN: \${GITHUB_TOKEN}
+${isCron ? "      REPO: owner/repo" : "      WEBHOOK_SECRET: \${WEBHOOK_SECRET}"}
+      PORT: "${bot.port}"
+      SPOOL_DIR: /spool
+    volumes: [ "spool:/spool" ]
+    ports: [ "${bot.port}:${bot.port}" ]
+    restart: unless-stopped`;
+  } else {
+    out = `# .github/workflows/${bot.name}.yml — zero servers needed
+name: ${bot.name}
+on:
+${isCron ? `  schedule: [ { cron: "17 3 * * *" } ]
+  workflow_dispatch: {}` : `  ${bot.events.toLowerCase().includes("check") ? "check_run" : bot.events.toLowerCase().includes("issue") ? "issues" : "pull_request"}: {}`}
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.26" }
+      - run: go run ./bots/${bot.name}
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+${isCron ? "          REPO: \${{ github.repository }}" : ""}`;
+  }
+  genout.textContent = out;
+}
+genbot.onchange = renderGen;
+genmode.onchange = renderGen;
+document.getElementById("gencopy").onclick = (e) => {
+  navigator.clipboard.writeText(genout.textContent);
+  e.target.textContent = "copied!";
+  setTimeout(() => e.target.textContent = "copy", 1500);
+};
+renderGen();
+
 </script>
 </body>
 </html>
