@@ -12,7 +12,15 @@ User=bots
 Environment=GITHUB_TOKEN_FILE=/run/secrets/github_token
 Environment=WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret
 Environment=ALLOWED_REPOS=yourorg/yourrepo
+# REPO is required by cron-style bots like stale-bot — without it the bot
+# exits at boot (#115)
+Environment=REPO=yourorg/yourrepo
 Environment=SPOOL_DIR=/var/lib/ghbot/spool
+# state files (stale-state.json etc.) are written to the working directory —
+# it must exist, be owned by the service user, and be writable, because
+# ProtectSystem=strict makes everything else read-only (#115):
+#   install -d -o bots -g bots /var/lib/ghbot
+WorkingDirectory=/var/lib/ghbot
 ExecStart=/usr/local/bin/stale-bot
 Restart=on-failure
 RestartSec=5
