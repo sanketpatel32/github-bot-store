@@ -416,6 +416,10 @@ const BOTS = [
     desc: "Opens a tracking issue when unreleased commits pile up — closes itself once you ship.",
     events: "none (scheduled)", perms: "contents: read, issues: write",
     notes: ["THRESHOLD_COMMITS sets the trigger (default 20)", "Updates one managed issue instead of spamming"] },
+  { name: "docs-link-checker", emoji: "🔗", type: "cron", port: 8125, accent: "#39c5cf",
+    desc: "Scans your markdown for dead links — one self-updating issue lists them, closes itself when fixed.",
+    events: "none (scheduled)", perms: "contents: read, issues: write",
+    notes: ["Concurrent link checking with per-URL caching", "HEAD-then-GET fallback for picky servers"] },
 ];
 
 const grid = document.getElementById("grid");

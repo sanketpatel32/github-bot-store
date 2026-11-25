@@ -32,6 +32,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [contributor-milestones](bots/contributor-milestones) | Celebrates merged-PR milestones | webhook |
 | [breaking-change-guard](bots/breaking-change-guard) | Requires acknowledgment of breaking changes | webhook |
 | [release-reminder](bots/release-reminder) | Reminds you when unreleased commits pile up | cron |
+| [docs-link-checker](bots/docs-link-checker) | Finds dead links in markdown docs | cron |
 
 ## Automations
 
