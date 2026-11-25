@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: gofmt check
+        run: |
+          out=$(gofmt -l bots shared)
+          if [ -n "$out" ]; then
+            echo "not gofmt-clean:"; echo "$out"; exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: build all bots
+        run: |
+          set -e
+          for bot in bots/*/; do
+            name=$(basename "$bot")
+            echo "building $name"
+            go build -o "/tmp/$name" "./$bot"
+          done
+
+      - name: smoke — every binary answers /healthz
+        run: |
+          set -e
+          for bot in bots/*/; do
+            name=$(basename "$bot")
+            port=$(grep -oP 'LoadConfig\(".*?",\s*"\K[0-9]+' "$bot/main.go" | head -1)
+            [ -z "$port" ] && continue
+            GITHUB_TOKEN=dummy PORT="$port" timeout 4 "/tmp/$name" &
+            pid=$!
+            sleep 0.6
+            curl -sf "http://localhost:$port/healthz" | grep -q ok || { echo "$name healthz failed"; exit 1; }
+            kill $pid 2>/dev/null || true
+            echo "$name: healthz ok"
+          done
