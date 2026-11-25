@@ -1,0 +1,17 @@
+# Caddy reverse proxy with automatic HTTPS — the simplest way to expose
+# webhook bots to GitHub. Bots bind to localhost only (BIND_ADDR=127.0.0.1).
+bots.example.com {
+    # one subdomain path per bot; adjust ports to your deployment
+    handle_path /size/* {
+        reverse_proxy 127.0.0.1:8101
+    }
+    handle_path /welcomer/* {
+        reverse_proxy 127.0.0.1:8102
+    }
+    handle_path /automerge/* {
+        reverse_proxy 127.0.0.1:8110
+    }
+}
+# GitHub webhook URL then looks like:
+#   https://bots.example.com/size/webhook
+# with the secret matching WEBHOOK_SECRET on the bot.

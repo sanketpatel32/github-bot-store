@@ -1,0 +1,28 @@
+# systemd unit for any bot — copy to /etc/systemd/system/<bot>.service,
+# adjust Environment and ExecStart, then: systemctl enable --now <bot>
+[Unit]
+Description=github-bot-store bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# run as an unprivileged user — the binary needs no special access
+User=bots
+Environment=GITHUB_TOKEN_FILE=/run/secrets/github_token
+Environment=WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret
+Environment=ALLOWED_REPOS=yourorg/yourrepo
+Environment=SPOOL_DIR=/var/lib/ghbot/spool
+ExecStart=/usr/local/bin/stale-bot
+Restart=on-failure
+RestartSec=5
+
+# hardening — bots need almost nothing
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/ghbot
+
+[Install]
+WantedBy=multi-user.target
