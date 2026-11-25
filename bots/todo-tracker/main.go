@@ -1,5 +1,7 @@
-// todo-tracker — scans pushed commits for newly added TODO/FIXME comments
-// and opens a tracking issue for each one (deduped by a hash in the title).
+// todo-tracker — scans pushed commits for added/removed TODO/FIXME comments
+// and reconciles tracking issues: opens one per new TODO (stable hash marker
+// in the body), closes the issue when the TODO disappears from the default
+// branch. Added lines are parsed from the actual diff, not raw patch text.
 package main
 
 import (
@@ -14,6 +16,8 @@ import (
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
 )
 
+const markerPrefix = "<!-- todo-tracker:"
+
 type PushEvent struct {
 	Ref  string `json:"ref"`
 	Repo struct {
@@ -21,31 +25,74 @@ type PushEvent struct {
 		DefaultBranch string `json:"default_branch"`
 	} `json:"repository"`
 	Commits []struct {
-		ID      string                    `json:"id"`
-		URL     string                    `json:"url"`
-		Author  struct{ Username string } `json:"author"`
-		Message string                    `json:"message"`
+		ID     string `json:"id"`
+		URL    string `json:"url"`
+		Author struct {
+			Username string `json:"username"`
+		} `json:"author"`
+		Message string `json:"message"`
 	} `json:"commits"`
 }
 
-var todoRe = regexp.MustCompile(`(?m)^\+.*(?:TODO|FIXME)\b[:\s]?(.*)$`)
+// addedLineRe matches diff lines adding content; the +/- prefix is stripped
+// by the patch parser, never regexed out of raw text.
+var todoRe = regexp.MustCompile(`(?:TODO|FIXME)\b[:\s]?(.*)`)
 
-func todoHash(file string, line string) string {
-	h := sha1.Sum([]byte(file + "|" + line))
+func marker(hash string) string { return markerPrefix + hash + " -->" }
+
+func todoHash(file, text string) string {
+	h := sha1.Sum([]byte(file + "|" + text))
 	return hex.EncodeToString(h[:])[:8]
 }
 
-func alreadyTracked(client *ghbot.Client, repo, hash string) bool {
-	path := fmt.Sprintf("/search/issues?q=repo:%s+in:title+%s&per_page=1", repo, hash)
-	body, err := client.Do("GET", path, nil)
+// parsePatch extracts added and removed TODOs from a unified diff patch.
+// Handles truncated patches gracefully (they just yield fewer lines) and
+// renamed files (caller passes the current filename).
+func parsePatch(patch string) (added, removed []string) {
+	for _, line := range strings.Split(patch, "\n") {
+		if strings.HasPrefix(line, "+++") || strings.HasPrefix(line, "---") ||
+			strings.HasPrefix(line, "@@") {
+			continue
+		}
+		if len(line) == 0 {
+			continue
+		}
+		sign := line[0]
+		content := line[1:]
+		m := todoRe.FindStringSubmatch(content)
+		if m == nil {
+			continue
+		}
+		text := strings.TrimSpace(m[1])
+		if text == "" {
+			text = "(no description)"
+		}
+		switch sign {
+		case '+':
+			added = append(added, text)
+		case '-':
+			removed = append(removed, text)
+		}
+	}
+	return added, removed
+}
+
+// findOpenTODOIssue returns the issue number for a hash marker, or 0.
+func findOpenTODOIssue(client *ghbot.Client, repo, hash string) int {
+	body, err := client.Do("GET", fmt.Sprintf(
+		"/search/issues?q=repo:%s+type:issue+state:open+%s&per_page=1", repo, marker(hash)), nil)
 	if err != nil {
-		return true // fail closed — don't spam issues on search errors
+		return 0
 	}
 	var result struct {
-		TotalCount int `json:"total_count"`
+		Items []struct {
+			Number int `json:"number"`
+		} `json:"items"`
 	}
-	json.Unmarshal(body, &result)
-	return result.TotalCount > 0
+	if json.Unmarshal(body, &result) != nil || len(result.Items) == 0 {
+		return 0
+	}
+	return result.Items[0].Number
 }
 
 func main() {
@@ -61,11 +108,10 @@ func main() {
 			return
 		}
 		if !strings.HasSuffix(ev.Ref, "/"+ev.Repo.DefaultBranch) {
-			return // only track TODOs that land on the default branch
+			return
 		}
 
 		for _, commit := range ev.Commits {
-			// fetch full diff for each commit
 			body, err := client.Do("GET",
 				fmt.Sprintf("/repos/%s/commits/%s", ev.Repo.FullName, commit.ID), nil)
 			if err != nil {
@@ -75,27 +121,29 @@ func main() {
 			var detail struct {
 				Files []struct {
 					Filename string `json:"filename"`
-					Patch    string `json:"patch"`
+					Patch    string `json:"patch"` // empty when truncated/binary
 				} `json:"files"`
 			}
-			if err := json.Unmarshal(body, &detail); err != nil {
+			if json.Unmarshal(body, &detail) != nil {
 				continue
 			}
 
 			for _, f := range detail.Files {
-				for _, m := range todoRe.FindAllStringSubmatch(f.Patch, -1) {
-					text := strings.TrimSpace(m[1])
-					if text == "" {
-						text = "(no description)"
-					}
+				if f.Patch == "" {
+					continue // truncated or binary — skip rather than guess
+				}
+				added, removed := parsePatch(f.Patch)
+
+				for _, text := range added {
 					hash := todoHash(f.Filename, text)
-					if alreadyTracked(client, ev.Repo.FullName, hash) {
-						continue
+					if findOpenTODOIssue(client, ev.Repo.FullName, hash) != 0 {
+						continue // already tracked — no duplicates
 					}
 					title := fmt.Sprintf("TODO [%s]: %.60s", hash, text)
 					bodyText := fmt.Sprintf(
-						"Found in `%s` by @%s in commit %.7s:\n\n```\n%s\n```\n\n%s",
-						f.Filename, commit.Author.Username, commit.ID, text, commit.URL)
+						"%s\nFound in `%s` by @%s in commit %.7s:\n\n```\n%s\n```\n\n%s\n\n_This issue closes automatically when the TODO is removed from `%s`._",
+						marker(hash), f.Filename, commit.Author.Username, commit.ID, text,
+						commit.URL, ev.Repo.DefaultBranch)
 					_, err := client.Do("POST",
 						fmt.Sprintf("/repos/%s/issues", ev.Repo.FullName),
 						map[string]any{"title": title, "body": bodyText, "labels": []string{"todo"}})
@@ -104,6 +152,19 @@ func main() {
 						continue
 					}
 					log.Printf("opened TODO issue [%s] for %s", hash, f.Filename)
+				}
+
+				for _, text := range removed {
+					hash := todoHash(f.Filename, text)
+					number := findOpenTODOIssue(client, ev.Repo.FullName, hash)
+					if number == 0 {
+						continue
+					}
+					client.Comment(ev.Repo.FullName, number, fmt.Sprintf(
+						"This TODO was removed in commit %.7s — closing automatically.", commit.ID))
+					client.Do("PATCH", fmt.Sprintf("/repos/%s/issues/%d", ev.Repo.FullName, number),
+						map[string]string{"state": "closed"})
+					log.Printf("closed TODO issue #%d [%s] — removed from %s", number, hash, f.Filename)
 				}
 			}
 		}
