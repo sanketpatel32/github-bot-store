@@ -54,7 +54,7 @@ func main() {
 		var prNumbers []int
 		switch {
 		case event == "check_run" && ev.CheckRun != nil:
-			if ev.Action != "completed" || ev.CheckRun.Conclusion != "failure" {
+			if ev.Action != "completed" {
 				return
 			}
 			sha = ev.CheckRun.HeadSHA
@@ -62,7 +62,7 @@ func main() {
 				prNumbers = append(prNumbers, pr.Number)
 			}
 		case event == "check_suite" && ev.CheckSuite != nil:
-			if ev.Action != "completed" || ev.CheckSuite.Conclusion != "failure" {
+			if ev.Action != "completed" {
 				return
 			}
 			sha = ev.CheckSuite.HeadSHA
@@ -99,21 +99,43 @@ func main() {
 				failed = append(failed, fmt.Sprintf("- ❌ [%s](%s) — %s", r.Name, r.HTMLURL, r.Conclusion))
 			}
 		}
-		if len(failed) == 0 {
-			return
-		}
-
-		body := marker + "\n**CI is failing** on the latest push:\n\n" + strings.Join(failed, "\n") +
-			"\n\n_Click a check to see the logs._"
-
 		for _, number := range prNumbers {
-			upsertComment(client, ev.Repo.FullName, number, body)
+			// never publish failure feedback for an outdated head — delayed
+			// events for the previous commit must not overwrite the feedback
+			// for the push a contributor is looking at now (#137)
+			prBody, err := client.Do("GET", fmt.Sprintf("/repos/%s/pulls/%d", ev.Repo.FullName, number), nil)
+			if err != nil {
+				continue
+			}
+			var prDetail struct {
+				Head struct {
+					SHA string `json:"sha"`
+				} `json:"head"`
+			}
+			if json.Unmarshal(prBody, &prDetail) != nil || prDetail.Head.SHA != sha {
+				log.Printf("PR #%d: event sha %.7s is not current head — skipping", number, sha)
+				continue
+			}
+
+			var body string
+			if len(failed) == 0 {
+				// checks green again — a comment still screaming failure on a
+				// repaired PR is worse than no comment (#137)
+				body = marker + "\n✅ CI is green on the latest push."
+			} else {
+				body = marker + "\n**CI is failing** on the latest push:\n\n" + strings.Join(failed, "\n") +
+					"\n\n_Click a check to see the logs._"
+			}
+			// green resolution only edits an existing warning — posting a
+			// fresh "CI is green" comment on a PR that never had a failure
+			// would be noise on every successful push
+			upsertComment(client, ev.Repo.FullName, number, body, len(failed) > 0)
 		}
 	})
 }
 
 // upsertComment edits the bot's existing comment if present, else posts a new one.
-func upsertComment(client *ghbot.Client, repo string, number int, body string) {
+func upsertComment(client *ghbot.Client, repo string, number int, body string, postIfMissing bool) {
 	commentsBody, err := client.Do("GET",
 		fmt.Sprintf("/repos/%s/issues/%d/comments?per_page=100", repo, number), nil)
 	if err == nil {
@@ -133,6 +155,9 @@ func upsertComment(client *ghbot.Client, repo string, number int, body string) {
 				}
 			}
 		}
+	}
+	if !postIfMissing {
+		return
 	}
 	if err := client.Comment(repo, number, body); err != nil {
 		log.Printf("comment: %v", err)
