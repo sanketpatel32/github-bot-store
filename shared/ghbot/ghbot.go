@@ -521,7 +521,16 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 		log.Printf("[%s] WARNING: accepting unsigned webhooks (ALLOW_UNSIGNED_WEBHOOKS) — do not expose this port", name)
 	}
 	if dir := os.Getenv("SPOOL_DIR"); dir != "" {
-		os.MkdirAll(dir, 0o700)
+		// a spool that cannot be written is worse than no spool — it silently
+		// degrades the durability the operator asked for, so fail at boot (#103)
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			log.Fatalf("[%s] SPOOL_DIR %q is not writable: %v", name, dir, err)
+		}
+		probe := spoolPath(dir, ".probe")
+		if err := os.WriteFile(probe, []byte("ok"), 0o600); err != nil {
+			log.Fatalf("[%s] SPOOL_DIR %q is not writable: %v", name, dir, err)
+		}
+		os.Remove(probe)
 		replaySpool(dir, name, handler)
 	}
 	mux := http.NewServeMux()
@@ -600,7 +609,12 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 		spoolDir := os.Getenv("SPOOL_DIR")
 		if spoolDir != "" {
 			if err := writeSpool(spoolDir, event, deliveryID, body); err != nil {
-				log.Printf("[%s] spool write failed: %v", name, err)
+				// 500 so GitHub redelivers instead of believing the event was
+				// durably accepted — it wasn't (#103)
+				unseeDelivery(deliveryID)
+				log.Printf("[%s] spool write failed: %v — refusing", name, err)
+				http.Error(w, "spool write failed — retry", http.StatusInternalServerError)
+				return
 			}
 		}
 		recordEvent(event)
