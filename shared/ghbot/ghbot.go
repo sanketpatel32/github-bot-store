@@ -574,7 +574,23 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 					Login string `json:"login"`
 				} `json:"sender"`
 			}
-			if json.Unmarshal(body, &meta) == nil &&
+			// dependency and CI automation senders are allowlisted by default:
+			// several bots in this store exist precisely to react to them
+			// (dependency-update-grouper on dependabot PRs, ci-failure-commenter
+			// on actions output). In Actions mode github-actions[bot] output
+			// cannot retrigger workflows, so it cannot loop (#104).
+			allow := os.Getenv("BOT_EVENT_ALLOWLIST")
+			if allow == "" {
+				allow = "dependabot[bot],renovate[bot],github-actions[bot]"
+			}
+			allowed := false
+			for _, a := range strings.Split(allow, ",") {
+				if strings.TrimSpace(a) == meta.Sender.Login {
+					allowed = true
+					break
+				}
+			}
+			if json.Unmarshal(body, &meta) == nil && !allowed &&
 				(meta.Sender.Type == "Bot" || strings.HasSuffix(meta.Sender.Login, "[bot]")) {
 				log.Printf("[%s] skipping bot-authored %s event from %s", name, event, meta.Sender.Login)
 				w.WriteHeader(http.StatusAccepted)
