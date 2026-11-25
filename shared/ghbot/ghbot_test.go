@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -113,5 +114,18 @@ func TestWithResourceLock(t *testing.T) {
 	wg.Wait()
 	if maxInFlight != 1 {
 		t.Errorf("resource lock violated: maxInFlight=%d", maxInFlight)
+	}
+}
+
+func TestGraphQLDryRunBlocksMutations(t *testing.T) {
+	t.Setenv("DRY_RUN", "true")
+	c := NewClient("x")
+	// a mutation must return the synthetic dry-run response without network
+	res, err := c.GraphQL("mutation { addProjectV2ItemById(input:{}) { item { id } } }", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(res), "dryRun") {
+		t.Errorf("mutation should short-circuit, got %s", res)
 	}
 }

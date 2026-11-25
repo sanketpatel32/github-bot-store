@@ -858,6 +858,14 @@ func jitterBackoff(attempt int) time.Duration {
 // raw "data" payload. Needed for the few surfaces REST doesn't cover:
 // discussions and Projects v2.
 func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessage, error) {
+	// dry-run parity with the REST path (#101): mutations must not leave the
+	// process in preview mode. Detection is heuristic — the operation keyword
+	// is the first meaningful token of the document — which is exact for every
+	// caller in this repo since none lead with whitespace or comments.
+	if os.Getenv("DRY_RUN") == "true" && strings.HasPrefix(strings.TrimSpace(query), "mutation") {
+		Logf("graphql", "dry-run", "DRY_RUN: skipping mutation %.60s", query)
+		return json.RawMessage(`{"data":{"dryRun":true}}`), nil
+	}
 	payload := map[string]any{"query": query}
 	if variables != nil {
 		payload["variables"] = variables
