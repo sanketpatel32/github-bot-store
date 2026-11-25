@@ -52,7 +52,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: flaky-state.json
-          key: flaky-state-v1
+          key: flaky-state-${{ github.run_id }}
           restore-keys: flaky-state-
       - run: go run ./bots/flaky-test-tracker
         env:
