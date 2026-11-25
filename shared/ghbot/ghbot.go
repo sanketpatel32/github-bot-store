@@ -357,7 +357,12 @@ func LoadConfig(botName, defaultPort string) Config {
 		Secret: secretOrFile("WEBHOOK_SECRET"),
 		Port:   os.Getenv("PORT"),
 	}
-	if cfg.Token == "" {
+	if cfg.Token == "" && appCfg == nil {
+		// either a static token or complete, valid app credentials will do —
+		// requiring both defeated the documented app-auth mode (#100)
+		if os.Getenv("GITHUB_APP_ID") != "" {
+			log.Fatalf("[%s] GitHub App auth is incomplete or invalid — need GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID and a parseable GITHUB_APP_PRIVATE_KEY", botName)
+		}
 		log.Fatalf("[%s] GITHUB_TOKEN is not set — copy .env.example to .env (or use GITHUB_TOKEN_FILE)", botName)
 	}
 	// config validation (#71): catch malformed values at boot, not mid-run
