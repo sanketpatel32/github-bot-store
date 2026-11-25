@@ -142,12 +142,44 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 		if i.PullRequest != nil {
 			kind = "pull request"
 		}
+		exempt := false
+		for _, l := range i.Labels {
+			if opts.exemptLabels[l.Name] {
+				exempt = true
+			}
+		}
+		if opts.exemptAssigned && len(i.Assignees) > 0 {
+			exempt = true
+		}
+		if opts.exemptMilestone && i.Milestone != nil {
+			exempt = true
+		}
+		if opts.exemptDraftPRs && i.PullRequest != nil && i.Draft {
+			exempt = true
+		}
+
 		markedAt, isMarked := st.Marked[i.Number]
 
 		if isMarked {
-			// genuine activity since we marked it? (our marking comment lands
-			// within seconds of markedAt; anything comfortably after is real)
-			if i.UpdatedAt.After(markedAt.Add(2 * time.Minute)) {
+			// policy may have changed since marking — a newly configured
+			// exemption must protect already-marked items, not just future
+			// ones (#121)
+			if exempt {
+				if opts.dryRun {
+					log.Printf("[dry-run] would un-stale %s #%d (now exempt)", kind, i.Number)
+					continue
+				}
+				client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/stale", repo, i.Number), nil)
+				delete(st.Marked, i.Number)
+				st.save()
+				log.Printf("un-staled %s #%d (newly exempt)", kind, i.Number)
+				continue
+			}
+			// genuine activity since we marked it? markedAt is recorded after
+			// the marking comment completes, so only a few seconds of slack
+			// are needed — a human reply 90 seconds later is real activity
+			// and must reset the clock (#121)
+			if i.UpdatedAt.After(markedAt.Add(5 * time.Second)) {
 				if opts.dryRun {
 					log.Printf("[dry-run] would un-stale %s #%d", kind, i.Number)
 					continue
@@ -175,22 +207,6 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 			continue
 		}
 
-		// exemptions — configurable labels, assignees, milestones, draft PRs
-		exempt := false
-		for _, l := range i.Labels {
-			if opts.exemptLabels[l.Name] {
-				exempt = true
-			}
-		}
-		if opts.exemptAssigned && len(i.Assignees) > 0 {
-			exempt = true
-		}
-		if opts.exemptMilestone && i.Milestone != nil {
-			exempt = true
-		}
-		if opts.exemptDraftPRs && i.PullRequest != nil && i.Draft {
-			exempt = true
-		}
 		if exempt {
 			continue
 		}
@@ -214,7 +230,9 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 				"This %s has been inactive for over %d days and is now marked stale. "+
 					"It will close in %d days unless there's new activity — any comment resets the clock.",
 				kind, staleDays, closeDays))
-			st.Marked[i.Number] = now
+			// record the mark only after the comment lands — everything after
+			// this timestamp is genuinely new activity, no guessing window
+			st.Marked[i.Number] = time.Now()
 			st.save()
 			log.Printf("marked %s #%d stale", kind, i.Number)
 		}
