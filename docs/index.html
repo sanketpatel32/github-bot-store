@@ -379,7 +379,11 @@ const BOTS = [
   { name: "ci-failure-commenter", emoji: "💥", type: "webhook", port: 8115, accent: "#d29922",
     desc: "When CI fails on a PR, comments which checks failed with links — no digging through the checks tab.",
     events: "Check runs, Check suites", perms: "checks: read, issues: write",
-    notes: ["Collapses repeat failures into one updated comment"] }
+    notes: ["Collapses repeat failures into one updated comment"] },
+  { name: "pr-aging-bot", emoji: "⏳", type: "cron", port: 8116, accent: "#e3b341",
+    desc: "Labels open PRs by wait time — fresh/week/stale/ancient — so review backlogs are visible at a glance.",
+    events: "none (scheduled)", perms: "pulls: read, issues: write",
+    notes: ["Skips drafts by default (SKIP_DRAFTS=false to include)", "Only writes when a PR crosses a tier boundary", "Run nightly as a GitHub Action or crontab"] },
 ];
 
 const grid = document.getElementById("grid");

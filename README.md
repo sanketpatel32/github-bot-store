@@ -23,6 +23,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [release-drafter](bots/release-drafter) | Running draft release from merged PRs |
 | [keyword-issue-labeler](bots/keyword-issue-labeler) | Auto-labels issues by content keywords |
 | [ci-failure-commenter](bots/ci-failure-commenter) | Comments failing checks with log links |
+| [pr-aging-bot](bots/pr-aging-bot) | Labels PRs by wait time — fresh/week/stale/ancient | cron |
 
 ## Automations
 
