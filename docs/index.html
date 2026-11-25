@@ -128,6 +128,66 @@
     .hero-inner > *, h1 .grad, .hero .grid-lines, .caret { animation: none !important; }
   }
 
+
+  /* ---------- rebuilt hero ---------- */
+  .hero { padding: 72px 0 60px; text-align: left; }
+  .hero-split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 900px) { .hero-split { grid-template-columns: 1fr; } .hero-visual { display: none; } }
+  .hero-copy h1 { font-size: clamp(2.6rem, 5.2vw, 4.4rem); }
+  .hero-visual { position: relative; height: 420px; }
+  .floatcard {
+    position: absolute; display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 20px; box-shadow: 0 18px 50px rgba(0,0,0,.45); width: 300px;
+    animation: floaty 5.5s ease-in-out infinite;
+  }
+  .floatcard .fe { font-size: 1.8rem; }
+  .floatcard b { display: block; font-size: .92rem; }
+  .floatcard small { color: var(--muted); font-size: .78rem; }
+  .fc1 { top: 8%; left: 4%; animation-delay: 0s; border-left: 3px solid var(--accent); }
+  .fc2 { top: 30%; right: 2%; animation-delay: 1.2s; border-left: 3px solid var(--green); }
+  .fc3 { top: 56%; left: 8%; animation-delay: 2.4s; border-left: 3px solid var(--orange); }
+  .fc4 { top: 78%; right: 10%; animation-delay: 3.4s; border-left: 3px solid var(--accent2); }
+  @keyframes floaty { 0%,100% { transform: translateY(0) rotate(-.5deg); } 50% { transform: translateY(-13px) rotate(.5deg); } }
+  .facts-strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 56px;
+  }
+  .fct {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+    color: var(--muted); font-size: .92rem; line-height: 1.45;
+  }
+  .fct b { display: block; color: var(--text); font-size: 1.5rem; font-family: var(--mono); margin-bottom: 4px; }
+
+  /* ---------- demo section ---------- */
+  .demo-sec { padding: 90px 0 30px; scroll-margin-top: 80px; }
+  .demo-wrap { max-width: 760px; margin: 0 auto; }
+  .gh-issue {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  }
+  .ghi-head { font-size: 1.05rem; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .ghi-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .ghi-dot.open { background: var(--green); box-shadow: 0 0 10px rgba(63,185,80,.6); }
+  .ghi-num { color: var(--muted); font-weight: 400; }
+  .ghi-body { color: var(--muted); margin: 12px 0; line-height: 1.55; font-size: .95rem; }
+  .ghi-meta { color: var(--muted); font-size: .8rem; }
+  .demo-feed { margin: 6px 0 0 26px; border-left: 2px solid var(--border); padding-left: 24px; min-height: 60px; }
+  .devt {
+    margin: 18px 0; opacity: 0; transform: translateY(12px);
+    transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1);
+  }
+  .devt.show { opacity: 1; transform: none; }
+  .devt .dt { font-size: .8rem; color: var(--muted); margin-bottom: 6px; font-family: var(--mono); }
+  .devt .dbox {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 11px; padding: 13px 17px;
+    font-size: .92rem; line-height: 1.5; display: flex; gap: 11px; align-items: flex-start;
+  }
+  .devt .dbox .demoji { font-size: 1.25rem; }
+  .devt .dbotname { font-family: var(--mono); font-size: .75rem; color: var(--accent); display: block; margin-bottom: 3px; }
+  .demo-replay { text-align: center; margin-top: 20px; }
+  .dlabel { display:inline-block; font-family: var(--mono); font-size:.7rem; padding: 1px 8px; border-radius: 10px; background: rgba(215,58,73,.25); color: #ff7b72; border: 1px solid rgba(215,58,73,.4); margin: 0 3px; }
+  .dlabel.feat { background: rgba(88,166,255,.18); color: var(--accent); border-color: rgba(88,166,255,.35); }
+
   /* ---------- gallery ---------- */
   .gallery-head { padding-top: 84px; }
   h2.section { font-size: 1.7rem; font-weight: 800; letter-spacing: -.5px; }
@@ -341,34 +401,28 @@
 <header class="hero">
   <div class="grid-lines"></div>
   <div class="container hero-inner">
-    <div class="pill"><span class="live"></span> open source · self-hosted · zero dependencies</div>
-    <h1>A maintenance crew<br><span class="grad">for your GitHub repo</span></h1>
-    <p class="tagline">32 little robots that label your pull requests, welcome new contributors, chase stale issues, write your release notes and sweep up dead branches. Each one is a single tiny file you can run anywhere — even on a $4 server.</p>
-    <div class="stats">
-      <div class="stat"><div class="num" id="botcount">0</div><div class="label">bots</div></div>
-      <div class="stat"><div class="num">~5MB</div><div class="label">per binary</div></div>
-      <div class="stat"><div class="num">~10MB</div><div class="label">RAM each</div></div>
-      <div class="stat"><div class="num">0</div><div class="label">dependencies</div></div>
+    <div class="hero-split">
+      <div class="hero-copy">
+        <div class="pill"><span class="live"></span> free · open source · runs itself</div>
+        <h1>Meet the robots<br>that <span class="grad">keep your repo tidy</span></h1>
+        <p class="tagline" style="margin-left:0;text-align:left">Pull requests label themselves. New contributors get welcomed. Dead issues clean themselves up. Release notes write themselves. Pick the robots you want — they start working in minutes, and you never think about them again.</p>
+        <div class="cta-row" style="justify-content:flex-start">
+          <a class="btn primary" href="#gallery">Meet the 32 robots</a>
+          <a class="btn" href="#demo">Watch one work ↓</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="floatcard fc1"><span class="fe">📏</span><div><b>Sizes up pull requests</b><small>just labeled PR #142 as Small</small></div></div>
+        <div class="floatcard fc2"><span class="fe">👋</span><div><b>Welcomes newcomers</b><small>said hi to a first-time contributor</small></div></div>
+        <div class="floatcard fc3"><span class="fe">🥀</span><div><b>Closes forgotten issues</b><small>marked 3 old issues as stale</small></div></div>
+        <div class="floatcard fc4"><span class="fe">📝</span><div><b>Writes release notes</b><small>drafted v0.2.0 for you</small></div></div>
+      </div>
     </div>
-    <div class="cta-row">
-      <a class="btn primary" href="#gallery">Browse the bots</a>
-      <a class="btn" href="https://github.com/sanketpatel32/github-bot-store">View on GitHub</a>
-    </div>
-
-    <div class="term">
-      <div class="term-bar"><span class="r"></span><span class="y"></span><span class="g"></span><span class="title">your-tiny-server ~ ssh</span></div>
-      <button class="copy-btn" data-copy="term">copy</button>
-      <div class="term-body" id="termbody"><span class="c"># grab the store</span>
-<span class="p">$</span> <span class="cmd">git clone https://github.com/sanketpatel32/github-bot-store</span>
-<span class="p">$</span> <span class="cmd">cd github-bot-store</span>
-
-<span class="c"># build any bot: one static binary, nothing else</span>
-<span class="p">$</span> <span class="cmd">go build -o stale-bot ./bots/stale-bot</span>
-
-<span class="c"># configure &amp; run</span>
-<span class="p">$</span> <span class="cmd">export GITHUB_TOKEN=ghp_... REPO=you/repo</span>
-<span class="p">$</span> <span class="cmd">./stale-bot</span>
-<span class="c">[stale-bot] listening on :8103</span></div>
+    <div class="facts-strip">
+      <div class="fct"><b>32</b> robots to pick from</div>
+      <div class="fct"><b>Zero</b> installation — they can live inside GitHub itself</div>
+      <div class="fct"><b>$4</b> is enough server for all of them, if you self-host</div>
+      <div class="fct"><b>Free</b> forever, MIT licensed</div>
     </div>
   </div>
 </header>
@@ -394,6 +448,21 @@
       </div>
     </div>
     <div class="catnav" id="catnav"></div>
+  </section>
+
+
+  <section class="demo-sec" id="demo">
+    <h2 class="section" style="text-align:center">This is what actually happens in your repo</h2>
+    <p class="sub" style="text-align:center;margin-bottom:34px">No configuration screens. No dashboards. The robots just show up and do the chores, like this:</p>
+    <div class="demo-wrap">
+      <div class="gh-issue">
+        <div class="ghi-head"><span class="ghi-dot open"></span> <b>Crash when uploading large files</b> <span class="ghi-num">#482</span></div>
+        <div class="ghi-body">whenever i upload anything bigger than 50mb the app just dies. no error, nothing. using firefox on linux if that matters</div>
+        <div class="ghi-meta">opened 2 minutes ago by <b>some-user</b> — their very first issue</div>
+      </div>
+      <div class="demo-feed" id="demofeed"></div>
+      <div class="demo-replay"><button class="btn" id="replaydemo" style="font-size:.85rem;padding:8px 18px">↺ watch it again</button></div>
+    </div>
   </section>
 
   <div id="sections"></div>
@@ -622,53 +691,7 @@ const BOTS = [
   })(t0);
 })();
 
-(function () {
-  const body = document.getElementById("termbody");
-  if (!body) return;
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) return;
-  const original = body.innerHTML;
-  const htmlLines = original.split("\n");
-  body.innerHTML = "";
-  let li = 0;
-  function typeLine() {
-    if (li >= htmlLines.length) {
-      const c = document.createElement("span");
-      c.className = "caret";
-      body.appendChild(c);
-      return;
-    }
-    const lineHtml = htmlLines[li++];
-    const div = document.createElement("div");
-    if (!lineHtml.trim()) { div.innerHTML = "&nbsp;"; body.appendChild(div); typeLine(); return; }
-    body.appendChild(div);
-    const isComment = lineHtml.includes('class="c"');
-    const isOutput = lineHtml.startsWith('<span class="c">[');
-    if (isComment || isOutput) {
-      div.innerHTML = lineHtml;
-      setTimeout(typeLine, 90);
-      return;
-    }
-    const tmp = document.createElement("div");
-    tmp.innerHTML = lineHtml;
-    const full = tmp.textContent;
-    let ci = 0;
-    (function typeChar() {
-      ci += 2;
-      div.textContent = full.slice(0, ci);
-      if (ci < full.length) {
-        setTimeout(typeChar, 18);
-      } else {
-        div.innerHTML = lineHtml;
-        setTimeout(typeLine, 110);
-      }
-    })();
-  }
-  const io = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) { io.disconnect(); typeLine(); }
-  }, { threshold: 0.25 });
-  io.observe(body);
-})();
+
 
 // ---------- gallery ----------
 const CATEGORIES = [
@@ -684,8 +707,6 @@ const catnav = document.getElementById("catnav");
 const modalContent = document.getElementById("modal-content");
 const emptyMsg = document.getElementById("empty");
 let query = "";
-
-document.getElementById("botcount").textContent = BOTS.length;
 
 // build one section per category, filled lazily by render()
 const sectionEls = {};
@@ -932,12 +953,38 @@ document.getElementById("search").oninput = (e) => { query = e.target.value; ren
 document.getElementById("permfilter").addEventListener("change", render);
 
 // terminal copy button
-document.querySelector('[data-copy="term"]').onclick = (e) => {
-  const text = document.getElementById("termbody").innerText.replace(/^\$ /gm, "");
-  navigator.clipboard.writeText(text);
-  e.target.textContent = "copied!";
-  setTimeout(() => e.target.textContent = "copy", 1500);
-};
+
+// ---------- live demo: watch three bots react to one issue ----------
+(function () {
+  const feed = document.getElementById("demofeed");
+  if (!feed) return;
+  const script = [
+    { t: "3 seconds later", emoji: "👋", bot: "first-touch-welcomer", html: "<b>Welcome!</b> Thanks for opening your first issue — a maintainer will be with you soon. Meanwhile, any extra detail helps." },
+    { t: "5 seconds later", emoji: "🏷️", bot: "keyword-issue-labeler", html: 'spotted the words <i>crash</i> and <i>error</i> — labeled it <span class="dlabel">bug</span>' },
+    { t: "8 seconds later", emoji: "📋", bot: "issue-form-validator", html: "gently asked for the missing piece: <i>could you add the steps to reproduce?</i>" },
+  ];
+  let timers = [];
+  function play() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    feed.innerHTML = "";
+    script.forEach((ev, i) => {
+      timers.push(setTimeout(() => {
+        const div = document.createElement("div");
+        div.className = "devt";
+        div.innerHTML = `<div class="dt">${ev.t} — <span style="color:var(--accent)">🤖 a bot acts</span></div>
+          <div class="dbox"><span class="demoji">${ev.emoji}</span><div><span class="dbotname">${ev.bot}</span>${ev.html}</div></div>`;
+        feed.appendChild(div);
+        requestAnimationFrame(() => requestAnimationFrame(() => div.classList.add("show")));
+      }, 700 + i * 1700));
+    });
+  }
+  const io = new IntersectionObserver((en) => {
+    if (en[0].isIntersecting) { io.disconnect(); play(); }
+  }, { threshold: 0.3 });
+  io.observe(feed);
+  document.getElementById("replaydemo").onclick = play;
+})();
 
 render();
 
