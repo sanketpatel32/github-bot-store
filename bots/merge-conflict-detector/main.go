@@ -47,23 +47,35 @@ func main() {
 			return // not a branch push (tag, etc.)
 		}
 
-		// only PRs targeting THIS branch — a develop push shouldn't warn
-		// main-targeted PRs, and non-default targets are covered too
-		rawPRs, err := client.GetAll(fmt.Sprintf(
-			"/repos/%s/pulls?state=open&base=%s", ev.Repo.FullName, branch))
-		if err != nil {
-			log.Printf("list prs: %v", err)
-			return
+		// PRs targeting THIS branch — a develop push shouldn't warn
+		// main-targeted PRs, and non-default targets are covered too.
+		// Also PRs whose HEAD is this branch: pushing a conflict fix to the
+		// feature branch must re-evaluate promptly, not wait for the next
+		// base-branch push (#128)
+		seen := map[int]bool{}
+		queries := []string{
+			fmt.Sprintf("/repos/%s/pulls?state=open&base=%s", ev.Repo.FullName, branch),
+			fmt.Sprintf("/repos/%s/pulls?state=open&head=%s", ev.Repo.FullName, branch),
 		}
-
-		for _, raw := range rawPRs {
-			var pr struct {
-				Number int `json:"number"`
-			}
-			if json.Unmarshal(raw, &pr) != nil {
+		for _, q := range queries {
+			rawPRs, err := client.GetAll(q)
+			if err != nil {
+				log.Printf("list prs: %v", err)
 				continue
 			}
-			checkOne(client, ev.Repo.FullName, pr.Number, branch)
+			for _, raw := range rawPRs {
+				var pr struct {
+					Number int `json:"number"`
+					Base   struct {
+						Ref string `json:"ref"`
+					} `json:"base"`
+				}
+				if json.Unmarshal(raw, &pr) != nil || seen[pr.Number] {
+					continue
+				}
+				seen[pr.Number] = true
+				checkOne(client, ev.Repo.FullName, pr.Number, pr.Base.Ref)
+			}
 		}
 	})
 }
@@ -98,7 +110,15 @@ func checkOne(client *ghbot.Client, repo string, number int, branch string) {
 		}
 		log.Printf("PR #%d newly conflicted", number)
 	case conflicted && existing != 0:
-		// still conflicted — nothing to do, the warning stands
+		if commentIsResolved(client, repo, existing) {
+			// it conflicts AGAIN — a comment saying "resolved" while the PR
+			// is conflicted is worse than no comment (#128)
+			client.Do("PATCH", fmt.Sprintf("/repos/%s/issues/comments/%d", repo, existing),
+				map[string]string{"body": marker + "\n" + fmt.Sprintf(
+					"⚠️ This PR **conflicts with `%s`** again. Please rebase or merge the base branch to resolve it.", branch)})
+			log.Printf("PR #%d re-conflicted — warning reactivated", number)
+			return
+		}
 		log.Printf("PR #%d still conflicted (no repeat spam)", number)
 	case !conflicted && existing != 0:
 		// conflict resolved — mark the same comment resolved
@@ -120,6 +140,22 @@ func fetchMergeable(client *ghbot.Client, repo string, number int) *bool {
 		return nil
 	}
 	return pr.Mergeable
+}
+
+// commentIsResolved reports whether the managed comment currently shows the
+// resolved state rather than the active warning.
+func commentIsResolved(client *ghbot.Client, repo string, id int64) bool {
+	body, err := client.Do("GET", fmt.Sprintf("/repos/%s/issues/comments/%d", repo, id), nil)
+	if err != nil {
+		return false
+	}
+	var c struct {
+		Body string `json:"body"`
+	}
+	if json.Unmarshal(body, &c) != nil {
+		return false
+	}
+	return strings.Contains(c.Body, "✅")
 }
 
 func findWarningComment(client *ghbot.Client, repo string, number int) int64 {
