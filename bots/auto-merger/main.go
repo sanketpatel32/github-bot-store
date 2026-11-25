@@ -22,21 +22,29 @@ type genericEvent struct {
 	} `json:"pull_request"`
 }
 
-func hasAutomergeLabel(client *ghbot.Client, repo string, number int) bool {
+type prInfo struct {
+	State  string `json:"state"`
+	Labels []struct{ Name string `json:"name"` } `json:"labels"`
+	Head   struct{ SHA string `json:"sha"` } `json:"head"`
+}
+
+func fetchPR(client *ghbot.Client, repo string, number int) (*prInfo, error) {
 	body, err := client.Do("GET", fmt.Sprintf("/repos/%s/pulls/%d", repo, number), nil)
 	if err != nil {
+		return nil, err
+	}
+	var pr prInfo
+	if err := json.Unmarshal(body, &pr); err != nil {
+		return nil, err
+	}
+	return &pr, nil
+}
+
+func (p *prInfo) automergeable() bool {
+	if p.State != "open" {
 		return false
 	}
-	var pr struct {
-		Labels    []struct{ Name string `json:"name"` } `json:"labels"`
-		Mergeable *bool `json:"mergeable"`
-		State     string `json:"state"`
-	}
-	json.Unmarshal(body, &pr)
-	if pr.State != "open" {
-		return false
-	}
-	for _, l := range pr.Labels {
+	for _, l := range p.Labels {
 		if l.Name == "automerge" {
 			return true
 		}
@@ -44,19 +52,9 @@ func hasAutomergeLabel(client *ghbot.Client, repo string, number int) bool {
 	return false
 }
 
-func checksGreen(client *ghbot.Client, repo string, number int) bool {
-	body, err := client.Do("GET", fmt.Sprintf("/repos/%s/pulls/%d", repo, number), nil)
-	if err != nil {
-		return false
-	}
-	var pr struct {
-		Head struct{ SHA string } `json:"head"`
-	}
-	json.Unmarshal(body, &pr)
-
-	// combined status for the head sha
+func checksGreen(client *ghbot.Client, repo, sha string) bool {
 	statusBody, err := client.Do("GET",
-		fmt.Sprintf("/repos/%s/commits/%s/status", repo, pr.Head.SHA), nil)
+		fmt.Sprintf("/repos/%s/commits/%s/status", repo, sha), nil)
 	if err != nil {
 		return false
 	}
@@ -70,14 +68,15 @@ func checksGreen(client *ghbot.Client, repo string, number int) bool {
 }
 
 func tryMerge(client *ghbot.Client, repo string, number int) {
-	if !hasAutomergeLabel(client, repo, number) {
+	pr, err := fetchPR(client, repo, number)
+	if err != nil || !pr.automergeable() {
 		return
 	}
-	if !checksGreen(client, repo, number) {
+	if !checksGreen(client, repo, pr.Head.SHA) {
 		log.Printf("PR #%d: automerge set but checks not green yet", number)
 		return
 	}
-	_, err := client.Do("PUT", fmt.Sprintf("/repos/%s/pulls/%d/merge", repo, number),
+	_, err = client.Do("PUT", fmt.Sprintf("/repos/%s/pulls/%d/merge", repo, number),
 		map[string]string{"merge_method": "squash"})
 	if err != nil {
 		log.Printf("merge PR #%d: %v", number, err)
@@ -108,15 +107,15 @@ func main() {
 			}
 		case "check_suite", "check_run", "status":
 			// a check completed — scan open automerge PRs
-			body, err := client.Do("GET",
-				fmt.Sprintf("/repos/%s/pulls?state=open&per_page=50", repo), nil)
+			items, err := client.GetAll(fmt.Sprintf("/repos/%s/pulls?state=open", repo))
 			if err != nil {
 				return
 			}
-			var prs []struct{ Number int `json:"number"` }
-			json.Unmarshal(body, &prs)
-			for _, pr := range prs {
-				tryMerge(client, repo, pr.Number)
+			for _, raw := range items {
+				var pr struct{ Number int `json:"number"` }
+				if json.Unmarshal(raw, &pr) == nil {
+					tryMerge(client, repo, pr.Number)
+				}
 			}
 		}
 	})
