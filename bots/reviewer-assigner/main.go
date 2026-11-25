@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
@@ -23,6 +24,9 @@ type PREvent struct {
 		User  struct {
 			Login string `json:"login"`
 		} `json:"user"`
+		Base struct {
+			Ref string `json:"ref"`
+		} `json:"base"`
 	} `json:"pull_request"`
 	Repo struct {
 		FullName      string `json:"full_name"`
@@ -37,8 +41,9 @@ type rule struct {
 }
 
 // parseCODEOWNERS parses standard CODEOWNERS syntax: lines of
-// "pattern owner1 owner2", #-comments. Globs are simplified to their
-// static prefix for prefix matching.
+// "pattern owner1 owner2", full-line #-comments, and inline comments.
+// Patterns keep their globs — matching is real glob evaluation, not the
+// static-prefix approximation that disagreed with native review requests (#127).
 func parseCODEOWNERS(content string) []rule {
 	var rules []rule
 	for _, line := range strings.Split(content, "\n") {
@@ -47,16 +52,77 @@ func parseCODEOWNERS(content string) []rule {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) < 2 {
+		// inline comments: tokens from a "#" onward are not owners (#127)
+		var owners []string
+		for _, f := range fields[1:] {
+			if strings.HasPrefix(f, "#") {
+				break
+			}
+			owners = append(owners, f)
+		}
+		if len(owners) == 0 {
 			continue
 		}
-		pattern := strings.TrimPrefix(fields[0], "/")
-		if idx := strings.IndexAny(pattern, "*?["); idx != -1 {
-			pattern = pattern[:idx]
-		}
-		rules = append(rules, rule{pattern, fields[1:]})
+		rules = append(rules, rule{fields[0], owners})
 	}
 	return rules
+}
+
+// globMatch evaluates one CODEOWNERS pattern against a repo-relative path
+// using gitignore-style rules: a pattern containing a slash is anchored to
+// the repo root, one without slashes matches the basename anywhere; "*"
+// stays within a path segment, "**" crosses them, trailing "/" matches the
+// whole directory subtree.
+func globMatch(pattern, path string) bool {
+	// a leading slash anchors the pattern to the repo root — capture that
+	// before trimming it (#127 anchoring)
+	anchored := strings.HasPrefix(pattern, "/")
+	pattern = strings.TrimPrefix(pattern, "/")
+	dirOnly := strings.HasSuffix(pattern, "/")
+	pattern = strings.TrimSuffix(pattern, "/")
+
+	if strings.Contains(pattern, "/") {
+		anchored = true
+	}
+	var re strings.Builder
+	re.WriteString("^")
+	if !anchored {
+		re.WriteString("(^|.*/)")
+	}
+	segments := strings.Split(pattern, "**")
+	for i, seg := range segments {
+		if i > 0 {
+			re.WriteString(".*")
+		}
+		for _, part := range strings.Split(seg, "*") {
+			// within a segment, * excludes '/'
+			partRe := ""
+			for _, r := range part {
+				switch r {
+				case '?':
+					partRe += "[^/]"
+				case '.', '+', '(', ')', '|', '[', ']', '{', '}', '^', '$', '\\':
+					partRe += "\\" + string(r)
+				default:
+					partRe += string(r)
+				}
+			}
+			re.WriteString(partRe)
+			re.WriteString("[^/]*")
+		}
+	}
+	out := re.String()
+	out = strings.TrimSuffix(out, "[^/]*") // trailing open match is implied
+	if dirOnly {
+		out += "(/|$)"
+	} else {
+		out += "$"
+	}
+	matched, err := regexp.MatchString(out, path)
+	if err != nil {
+		return false
+	}
+	return matched
 }
 
 // loadRules tries the repo's CODEOWNERS first, then local reviewers.json.
@@ -95,16 +161,15 @@ func loadRules(client *ghbot.Client, repo, branch string) []rule {
 	return nil
 }
 
-// matchOwners returns deduped owners for the changed files; the longest
-// matching pattern wins per file.
+// matchOwners returns deduped owners for the changed files. CODEOWNERS
+// semantics: the LAST matching pattern in file order wins per file —
+// later, more specific rules override earlier general ones (#127).
 func matchOwners(rules []rule, filenames []string) []string {
 	set := map[string]bool{}
 	for _, f := range filenames {
-		bestLen := -1
 		var best []string
 		for _, r := range rules {
-			if strings.HasPrefix(f, r.pattern) && len(r.pattern) > bestLen {
-				bestLen = len(r.pattern)
+			if globMatch(r.pattern, f) {
 				best = r.owners
 			}
 		}
@@ -142,7 +207,14 @@ func main() {
 			return
 		}
 
-		rules := loadRules(client, ev.Repo.FullName, ev.Repo.DefaultBranch)
+		// ownership rules come from the branch the PR TARGETS — a PR into
+		// release/2.x must use that branch's CODEOWNERS, which can differ
+		// from the default branch's (#127)
+		branch := ev.PR.Base.Ref
+		if branch == "" {
+			branch = ev.Repo.DefaultBranch
+		}
+		rules := loadRules(client, ev.Repo.FullName, branch)
 		if len(rules) == 0 {
 			return
 		}

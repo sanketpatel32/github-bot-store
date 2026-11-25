@@ -2,58 +2,48 @@ package main
 
 import "testing"
 
-func TestParseCODEOWNERS(t *testing.T) {
-	content := `# comment line
-*.go            @go-team-lead
-/docs/          @docs-owner @org/tech-writers
-src/frontend/   @alice @bob
-
-*               @fallback
-`
-	rules := parseCODEOWNERS(content)
-	if len(rules) != 4 {
-		t.Fatalf("expected 4 rules, got %d", len(rules))
+func TestGlobMatchBasics(t *testing.T) {
+	cases := []struct {
+		pattern, path string
+		want          bool
+	}{
+		{"*.go", "main.go", true},
+		{"*.go", "src/main.go", true}, // no slash = basename anywhere
+		{"*.go", "README.md", false},
+		{"/src/", "src/deep/file.go", true}, // dir subtree
+		{"/src/deep/", "src/file.go", false},
+		{"docs/**/*.md", "docs/a/b/c.md", true},
+		{"docs/**/*.md", "docs/a/b/c.txt", false},
+		{"/main.go", "main.go", true},
+		{"/main.go", "cmd/main.go", false}, // anchored to root
 	}
-	if rules[0].pattern != "" { // *.go glob -> static prefix is empty-ish; check fallback logic below instead
-		t.Logf("pattern[0] = %q", rules[0].pattern)
-	}
-	// docs rule should carry both owners incl. team
-	found := false
-	for _, r := range rules {
-		if r.pattern == "docs/" {
-			found = true
-			if len(r.owners) != 2 || r.owners[1] != "@org/tech-writers" {
-				t.Errorf("docs owners wrong: %v", r.owners)
-			}
+	for _, c := range cases {
+		if got := globMatch(c.pattern, c.path); got != c.want {
+			t.Errorf("globMatch(%q, %q) = %v, want %v", c.pattern, c.path, got, c.want)
 		}
-	}
-	if !found {
-		t.Error("docs/ rule missing")
 	}
 }
 
-func TestMatchOwnersLongestPrefix(t *testing.T) {
-	rules := []rule{
-		{"", []string{"@fallback"}},
-		{"src/", []string{"@backend"}},
-		{"src/web/", []string{"@frontend"}},
+func TestLastMatchWins(t *testing.T) {
+	rules := parseCODEOWNERS("* @default\n*.go @go\n")
+	owners := matchOwners(rules, []string{"main.go"})
+	if len(owners) != 1 || owners[0] != "@go" {
+		t.Errorf("later *.go must override earlier *, got %v", owners)
 	}
-	owners := matchOwners(rules, []string{"src/web/app.ts", "src/api/server.go", "README.md"})
-	set := map[string]bool{}
-	for _, o := range owners {
-		set[o] = true
-	}
-	for _, want := range []string{"@frontend", "@backend", "@fallback"} {
-		if !set[want] {
-			t.Errorf("expected owner %s in %v", want, owners)
-		}
-	}
+}
 
-	// longest prefix: src/web file must NOT also pull @backend
-	owners = matchOwners(rules, []string{"src/web/app.ts"})
-	for _, o := range owners {
-		if o == "@backend" {
-			t.Error("longest-prefix violated: src/web pulled @backend")
-		}
+func TestLastMatchWinsRegardlessOfSpecificity(t *testing.T) {
+	// the counterintuitive core of CODEOWNERS: order decides, not length
+	rules := parseCODEOWNERS("/src/deep/ @deep\n/src/ @last\n")
+	owners := matchOwners(rules, []string{"src/deep/file.go"})
+	if len(owners) != 1 || owners[0] != "@last" {
+		t.Errorf("later /src/ must win over earlier /src/deep/, got %v", owners)
+	}
+}
+
+func TestInlineCommentsNotOwners(t *testing.T) {
+	rules := parseCODEOWNERS("*.go @go # the go team\n")
+	if len(rules) != 1 || len(rules[0].owners) != 1 || rules[0].owners[0] != "@go" {
+		t.Errorf("inline comment tokens must not become owners: %+v", rules)
 	}
 }
