@@ -23,8 +23,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: stale-state.json
-          key: stale-bot-state
-          restore-keys: stale-bot-state
+          key: stale-bot-state-${{ github.run_id }}
+          restore-keys: stale-bot-state-
       - run: go run ./bots/stale-bot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
