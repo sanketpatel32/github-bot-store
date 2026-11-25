@@ -36,8 +36,8 @@ func main() {
 			return
 		}
 
-		body, err := client.Do("GET",
-			fmt.Sprintf("/repos/%s/pulls?state=open&per_page=50", ev.Repo.FullName), nil)
+		rawPRs, err := client.GetAll(
+			fmt.Sprintf("/repos/%s/pulls?state=open", ev.Repo.FullName))
 		if err != nil {
 			log.Printf("list prs: %v", err)
 			return
@@ -46,7 +46,15 @@ func main() {
 			Number int    `json:"number"`
 			Title  string `json:"title"`
 		}
-		json.Unmarshal(body, &prs)
+		for _, raw := range rawPRs {
+			var pr struct {
+				Number int    `json:"number"`
+				Title  string `json:"title"`
+			}
+			if json.Unmarshal(raw, &pr) == nil {
+				prs = append(prs, pr)
+			}
+		}
 
 		for _, pr := range prs {
 			// mergeable is computed async — fetch, retry once after a delay

@@ -47,16 +47,19 @@ func main() {
 
 func runDigest(client *ghbot.Client, repo string) {
 	since := time.Now().Add(-7 * 24 * time.Hour)
-	body, err := client.Do("GET", fmt.Sprintf(
-		"/repos/%s/issues?state=all&since=%s&per_page=100&sort=updated",
-		repo, since.UTC().Format(time.RFC3339)), nil)
+	rawItems, err := client.GetAll(fmt.Sprintf(
+		"/repos/%s/issues?state=all&since=%s&sort=updated",
+		repo, since.UTC().Format(time.RFC3339)))
 	if err != nil {
 		log.Printf("digest fetch: %v", err)
 		return
 	}
 	var items []item
-	if err := json.Unmarshal(body, &items); err != nil {
-		return
+	for _, raw := range rawItems {
+		var it item
+		if json.Unmarshal(raw, &it) == nil {
+			items = append(items, it)
+		}
 	}
 
 	var merged, newIssues, closedIssues []item

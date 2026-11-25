@@ -56,9 +56,9 @@ func main() {
 			return
 		}
 
-		// fetch changed files
-		body, err := client.Do("GET",
-			fmt.Sprintf("/repos/%s/pulls/%d/files?per_page=100", ev.Repo.FullName, ev.Number), nil)
+		// fetch changed files — paginated, large PRs can span pages
+		rawFiles, err := client.GetAll(
+			fmt.Sprintf("/repos/%s/pulls/%d/files", ev.Repo.FullName, ev.Number))
 		if err != nil {
 			log.Printf("files: %v", err)
 			return
@@ -66,8 +66,13 @@ func main() {
 		var files []struct {
 			Filename string `json:"filename"`
 		}
-		if err := json.Unmarshal(body, &files); err != nil {
-			return
+		for _, raw := range rawFiles {
+			var f struct {
+				Filename string `json:"filename"`
+			}
+			if json.Unmarshal(raw, &f) == nil {
+				files = append(files, f)
+			}
 		}
 
 		// match prefixes — longest prefix wins per file
