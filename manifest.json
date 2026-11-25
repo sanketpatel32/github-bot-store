@@ -411,5 +411,19 @@
       "Oldest queued PR is always the head",
       "Head merging or closing promotes the next in line automatically"
     ]
+  },
+  {
+    "name": "discussion-triage-bot",
+    "emoji": "\ud83d\udcac",
+    "type": "cron",
+    "port": 8131,
+    "accent": "#39c5cf",
+    "desc": "Keeps discussions from rotting \u2014 one self-updating issue lists questions nobody has answered.",
+    "events": "none (scheduled)",
+    "perms": "discussions: read, issues: write",
+    "notes": [
+      "Uses the GraphQL API \u2014 discussions aren't in REST",
+      "Verified live against github-bot-store itself"
+    ]
   }
 ]

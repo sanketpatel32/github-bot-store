@@ -467,6 +467,10 @@ const BOTS = [
     desc: "A minimal merge queue — label PRs queue/merge and the bot enforces FIFO order with queue/next promotion.",
     events: "Pull requests", perms: "pulls: read, issues: write",
     notes: ["Oldest queued PR is always the head", "Head merging or closing promotes the next in line automatically"] },
+  { name: "discussion-triage-bot", emoji: "💬", type: "cron", port: 8131, accent: "#39c5cf",
+    desc: "Keeps discussions from rotting — one self-updating issue lists questions nobody has answered.",
+    events: "none (scheduled)", perms: "discussions: read, issues: write",
+    notes: ["Uses the GraphQL API — discussions aren't in REST", "Verified live against github-bot-store itself"] },
 
 ];
 

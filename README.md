@@ -38,6 +38,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [dependency-update-grouper](bots/dependency-update-grouper) | Labels dependabot/renovate PRs patch/minor/major from semver in the title — batch the safe ones, review the rest. | webhook |
 | [flaky-test-tracker](bots/flaky-test-tracker) | Catches flaky CI — checks that pass on retry with zero code changes — and files tracking issues. | webhook |
 | [merge-queue-assistant](bots/merge-queue-assistant) | A minimal merge queue — label PRs queue/merge and the bot enforces FIFO order with queue/next promotion. | webhook |
+| [discussion-triage-bot](bots/discussion-triage-bot) | Keeps discussions from rotting — one self-updating issue lists questions nobody has answered. | cron |
 
 ## Automations
 
