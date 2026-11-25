@@ -3,3 +3,4 @@
 /bots/*/bot
 *.test
 /dist/
+flaky-state.json
