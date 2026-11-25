@@ -99,6 +99,12 @@ func parsePatch(patch string) (added, removed []string) {
 		if !isCommentPrefix(content[:loc[0]]) {
 			continue
 		}
+		// "TODO/FIXME" compounds are prose talking about markers, not a
+		// marker — reject when a slash directly follows the keyword
+		rest := content[loc[0]:]
+		if strings.HasPrefix(rest, "TODO/") || strings.HasPrefix(rest, "FIXME/") {
+			continue
+		}
 		text := strings.TrimSpace(content[loc[2]:loc[3]])
 		if len([]rune(text)) < 4 {
 			// empty or one-word markers carry no actionable content and only
