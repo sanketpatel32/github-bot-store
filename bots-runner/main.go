@@ -20,11 +20,13 @@ import (
 	"time"
 )
 
-type child struct {
-	name     string
-	cmd      *exec.Cmd
-	restarts int
-}
+// live tracks each bot's currently running process so shutdown can stop
+// and reap every child — exiting without this leaves orphaned bots holding
+// the ports a replacement supervisor needs (#119)
+var live = struct {
+	sync.Mutex
+	procs map[string]*exec.Cmd
+}{procs: map[string]*exec.Cmd{}}
 
 func resolveBinary(name string) string {
 	// same directory as runner first, then PATH
@@ -52,19 +54,33 @@ func supervise(name string, wg *sync.WaitGroup, stop <-chan struct{}) {
 		cmd.Env = os.Environ()
 		if err := cmd.Start(); err != nil {
 			log.Printf("[%s] failed to start: %v", name, err)
-			time.Sleep(backoff)
+			select {
+			case <-stop:
+				return
+			case <-time.After(backoff):
+			}
 			backoff = min(backoff*2, 60*time.Second)
 			continue
 		}
 		log.Printf("[%s] started (pid %d)", name, cmd.Process.Pid)
+		live.Lock()
+		live.procs[name] = cmd
+		live.Unlock()
 		err := cmd.Wait()
+		live.Lock()
+		delete(live.procs, name)
+		live.Unlock()
 		select {
 		case <-stop:
 			return
 		default:
 		}
 		log.Printf("[%s] exited (%v) — restarting in %s", name, err, backoff)
-		time.Sleep(backoff)
+		select {
+		case <-stop:
+			return
+		case <-time.After(backoff):
+		}
 		backoff = min(backoff*2, 60*time.Second)
 	}
 }
@@ -112,7 +128,31 @@ func main() {
 	<-sig
 	log.Printf("shutting down — stopping children")
 	close(stop)
-	// children receive SIGINT via process group; give them a moment
-	time.Sleep(500 * time.Millisecond)
+	// signal every child explicitly and wait for reaping — a SIGTERM aimed
+	// at the supervisor alone does not reach them (#119)
+	live.Lock()
+	for name, cmd := range live.procs {
+		log.Printf("[%s] sending SIGTERM to pid %d", name, cmd.Process.Pid)
+		cmd.Process.Signal(syscall.SIGTERM)
+	}
+	live.Unlock()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		live.Lock()
+		remaining := len(live.procs)
+		live.Unlock()
+		if remaining == 0 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	live.Lock()
+	for name, cmd := range live.procs {
+		log.Printf("[%s] still alive after grace period — SIGKILL", name)
+		cmd.Process.Kill()
+	}
+	live.Unlock()
+	wg.Wait()
+	log.Printf("all children stopped")
 	os.Exit(0)
 }
