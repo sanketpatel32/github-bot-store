@@ -50,8 +50,10 @@ func ports() []struct {
 		Port int    `json:"port"`
 	}
 	data, err := os.ReadFile("manifest.json")
-	if err == nil {
-		json.Unmarshal(data, &manifest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: manifest.json not found in %s — no probe targets (run from the repo root)\n", mustGetwd())
+	} else if err := json.Unmarshal(data, &manifest); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: manifest.json is invalid: %v\n", err)
 	}
 	if len(os.Args) > 1 && os.Args[1] == "ports" {
 		for _, b := range manifest {
@@ -61,10 +63,23 @@ func ports() []struct {
 	return manifest
 }
 
+func mustGetwd() string {
+	d, err := os.Getwd()
+	if err != nil {
+		return "unknown directory"
+	}
+	return d
+}
+
 func probe() {
 	hc := &http.Client{Timeout: 2 * time.Second}
 	up, down := 0, 0
-	for _, b := range ports() {
+	targets := ports()
+	if len(targets) == 0 {
+		fmt.Println("no bots discovered — nothing to probe")
+		os.Exit(2)
+	}
+	for _, b := range targets {
 		url := fmt.Sprintf("http://localhost:%d/healthz", b.Port)
 		resp, err := hc.Get(url)
 		if err != nil {
@@ -89,4 +104,7 @@ func probe() {
 		}
 	}
 	fmt.Printf("\n%d up, %d down\n", up, down)
+	if down > 0 {
+		os.Exit(1)
+	}
 }
