@@ -96,6 +96,9 @@ type Config struct {
 	Token  string
 	Secret string
 	Port   string
+	// AllowedRepos restricts webhook processing to these full repo names
+	// (owner/repo). Empty means all repos allowed (#15).
+	AllowedRepos map[string]bool
 }
 
 // LoadConfig reads env vars and exits with a helpful message if the token is missing.
@@ -111,6 +114,14 @@ func LoadConfig(botName, defaultPort string) Config {
 	}
 	if cfg.Port == "" {
 		cfg.Port = defaultPort
+	}
+	if list := os.Getenv("ALLOWED_REPOS"); list != "" {
+		cfg.AllowedRepos = map[string]bool{}
+		for _, r := range strings.Split(list, ",") {
+			if r = strings.TrimSpace(r); r != "" {
+				cfg.AllowedRepos[r] = true
+			}
+		}
 	}
 	return cfg
 }
@@ -223,6 +234,22 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			if json.Unmarshal(body, &meta) == nil &&
 				(meta.Sender.Type == "Bot" || strings.HasSuffix(meta.Sender.Login, "[bot]")) {
 				log.Printf("[%s] skipping bot-authored %s event from %s", name, event, meta.Sender.Login)
+				w.WriteHeader(http.StatusAccepted)
+				return
+			}
+		}
+
+		// repo allowlist (#15): one bot binary can serve a webhook installed
+		// org-wide; without this it acts on repos you never intended
+		if len(cfg.AllowedRepos) > 0 {
+			var meta struct {
+				Repo struct {
+					FullName string `json:"full_name"`
+				} `json:"repository"`
+			}
+			if json.Unmarshal(body, &meta) == nil && meta.Repo.FullName != "" &&
+				!cfg.AllowedRepos[meta.Repo.FullName] {
+				log.Printf("[%s] repo %s not in ALLOWED_REPOS — ignoring", name, meta.Repo.FullName)
 				w.WriteHeader(http.StatusAccepted)
 				return
 			}
