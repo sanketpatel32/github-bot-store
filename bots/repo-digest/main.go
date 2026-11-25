@@ -208,6 +208,11 @@ func main() {
 	}
 	intervalHours := envInt("DIGEST_INTERVAL_HOURS", 24)
 
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		runDigest(client, repo)
+		return
+	}
+
 	go func() {
 		for {
 			// run often (default daily) but only post once per ISO week —

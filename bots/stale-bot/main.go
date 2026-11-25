@@ -237,6 +237,12 @@ func main() {
 	}
 	st := loadState("stale-state.json")
 
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		log.Printf("sweeping %s once (actions mode)", repo)
+		sweep(client, repo, st, staleDays, closeDays, opts)
+		return
+	}
+
 	go func() {
 		for {
 			log.Printf("sweeping %s (stale>%dd, close after %dd marked)", repo, staleDays, closeDays)

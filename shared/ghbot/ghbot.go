@@ -145,11 +145,34 @@ func ServeHealth(cfg Config, name string) {
 	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
 
+// RunAction executes the handler once using the GitHub Actions event
+// payload (GITHUB_EVENT_PATH / GITHUB_EVENT_NAME) instead of a webhook
+// delivery — this is how bots self-host on a repo with zero servers.
+// Returns true when running inside Actions.
+func RunAction(name string, handler WebhookHandler) bool {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		return false
+	}
+	eventPath := os.Getenv("GITHUB_EVENT_PATH")
+	eventName := os.Getenv("GITHUB_EVENT_NAME")
+	data, err := os.ReadFile(eventPath)
+	if err != nil {
+		log.Printf("[%s] no actions event payload at %s: %v", name, eventPath, err)
+		return true
+	}
+	log.Printf("[%s] running as GitHub Action for event %q", name, eventName)
+	handler(eventName, data)
+	return true
+}
+
 // Serve starts the bot's HTTP server: POST /webhook plus GET /healthz.
 // A nonempty WEBHOOK_SECRET is required in production — unsigned webhooks
 // mean anyone who finds your port can trigger bot actions. Set
 // ALLOW_UNSIGNED_WEBHOOKS=true for local testing only.
 func Serve(cfg Config, name string, handler WebhookHandler) {
+	if RunAction(name, handler) {
+		return
+	}
 	if cfg.Secret == "" && os.Getenv("ALLOW_UNSIGNED_WEBHOOKS") != "true" {
 		log.Fatalf("[%s] WEBHOOK_SECRET is not set. Configure the same secret in "+
 			"GitHub webhook settings, or set ALLOW_UNSIGNED_WEBHOOKS=true for local testing only.", name)
