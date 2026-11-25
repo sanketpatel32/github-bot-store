@@ -61,3 +61,15 @@ jobs:
             [ -z "$ok" ] && { echo "$name healthz failed"; exit 1; }
             echo "$name: healthz ok"
           done
+
+  behavior-tests:
+    name: hermetic bot behavior tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      # replays canned events at real bot binaries against the fake API and
+      # asserts exact mutation transcripts — no network, no secrets (#145)
+      - run: go run ./tools/previewtest
