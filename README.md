@@ -24,6 +24,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [keyword-issue-labeler](bots/keyword-issue-labeler) | Auto-labels issues by content keywords |
 | [ci-failure-commenter](bots/ci-failure-commenter) | Comments failing checks with log links |
 | [pr-aging-bot](bots/pr-aging-bot) | Labels PRs by wait time — fresh/week/stale/ancient | cron |
+| [review-reminder](bots/review-reminder) | Nudges reviewers when PRs wait too long | cron |
 
 ## Automations
 
