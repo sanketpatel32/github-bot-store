@@ -145,6 +145,35 @@ func (c *Client) recordAPI() {
 	metrics.Unlock()
 }
 
+// ---- outbound notifications (#88) ----
+
+// Notify posts a plain-text message to NOTIFY_WEBHOOK_URL — works with
+// Slack incoming webhooks, Discord webhooks, or any endpoint accepting
+// {"text": "..."} / {"content": "..."}. Errors are logged, never fatal:
+// notifications are best-effort side channels, not bot logic.
+// Opt-in per bot; nothing is sent when the env var is unset.
+func Notify(bot, message string) {
+	url := os.Getenv("NOTIFY_WEBHOOK_URL")
+	if url == "" {
+		return
+	}
+	payload := map[string]string{"text": fmt.Sprintf("[%s] %s", bot, message), "content": fmt.Sprintf("[%s] %s", bot, message)}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	hc := &http.Client{Timeout: 5 * time.Second}
+	resp, err := hc.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		log.Printf("notify: %v", err)
+		return
+	}
+	resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		log.Printf("notify: webhook returned %d", resp.StatusCode)
+	}
+}
+
 // ---- persistent scheduler (#75) ----
 
 // ServeCron runs fn once immediately, then on every interval, while serving

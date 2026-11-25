@@ -151,6 +151,7 @@ func tryMerge(client *ghbot.Client, repo string, number int) {
 		return
 	}
 	log.Printf("merged PR #%d at %.10s", number, headSHA)
+	ghbot.Notify("auto-merger", fmt.Sprintf("merged PR #%d in %s", number, repo))
 }
 
 func main() {

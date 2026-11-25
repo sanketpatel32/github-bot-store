@@ -170,6 +170,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 				delete(st.Marked, i.Number)
 				st.save()
 				log.Printf("closed %s #%d", kind, i.Number)
+				ghbot.Notify("stale-bot", fmt.Sprintf("closed stale issue #%d in %s", i.Number, repo))
 			}
 			continue
 		}
