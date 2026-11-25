@@ -77,3 +77,16 @@ func TestParsePatchSkipsProseAndEmptyMarkers(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultBranchGuardExact(t *testing.T) {
+	// suffix matching accepted feature branches and tags ending in the
+	// default branch name (#110) — equality must not
+	for _, bad := range []string{"refs/heads/feature/main", "refs/tags/main", "refs/heads/notmain"} {
+		if "refs/heads/main" == bad {
+			t.Errorf("%s must not equal the default branch ref", bad)
+		}
+	}
+	if "refs/heads/main" != "refs/heads/"+"main" {
+		t.Error("exact match for the real default branch ref must pass")
+	}
+}

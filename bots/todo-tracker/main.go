@@ -154,7 +154,7 @@ func main() {
 		if err := json.Unmarshal(payload, &ev); err != nil {
 			return
 		}
-		if !strings.HasSuffix(ev.Ref, "/"+ev.Repo.DefaultBranch) {
+		if ev.Ref != "refs/heads/"+ev.Repo.DefaultBranch {
 			return
 		}
 
