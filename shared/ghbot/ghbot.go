@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -383,19 +384,24 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	var resp *http.Response
+	// reads are idempotent, so network errors are safe to retry; writes
+	// (POST/PATCH/DELETE) are not retried on network errors because the
+	// mutation may have already landed server-side — only definitive 5xx
+	// responses are retried for those (#12).
+	isRead := method == "GET" || method == "HEAD"
 	for attempt := 0; attempt < 4; attempt++ {
 		resp, err = c.hc.Do(req)
 		if err != nil {
-			if attempt == 3 {
+			if attempt == 3 || !isRead {
 				return nil, err
 			}
-			time.Sleep(time.Duration(1<<attempt) * time.Second)
+			time.Sleep(jitterBackoff(attempt))
 			continue
 		}
 		// retry on server errors and secondary rate limits
 		if resp.StatusCode == 502 || resp.StatusCode == 503 ||
 			(resp.StatusCode == 429) || (resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0") {
-			wait := time.Duration(1<<attempt) * 2 * time.Second
+			wait := jitterBackoff(attempt)
 			if rs := resp.Header.Get("Retry-After"); rs != "" {
 				if secs, cerr := strconv.Atoi(rs); cerr == nil {
 					wait = time.Duration(secs) * time.Second
@@ -416,6 +422,13 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		return body, &APIError{Method: method, Path: path, Status: resp.StatusCode, Body: string(body)}
 	}
 	return body, nil
+}
+
+// jitterBackoff returns exponential backoff with jitter — without jitter,
+// retrying bots thundering-herd the API after an outage (#12).
+func jitterBackoff(attempt int) time.Duration {
+	base := time.Duration(1<<attempt) * time.Second
+	return base + time.Duration(rand.Int63n(int64(base)))
 }
 
 // GetAll follows Link-header pagination and returns concatenated JSON array items
