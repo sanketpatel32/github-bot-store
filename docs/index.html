@@ -493,7 +493,9 @@ function render() {
   for (const bot of BOTS) {
     if (activeFilter !== "all" && bot.type !== activeFilter) continue;
     const perm = document.getElementById("permfilter").value;
-    if (perm && !bot.perms.includes(perm.replace(/\s/g,""))) continue;
+    // compare normalized — manifest perms carry spaces ("issues: write")
+    // while the dropdown strips them, so exact matching always missed (#111)
+    if (perm && !bot.perms.split(",").some(p => p.replace(/\s/g,"") === perm.replace(/\s/g,""))) continue;
     const q = query.toLowerCase();
     if (q && !bot.name.includes(q) && !bot.desc.toLowerCase().includes(q)) continue;
     shown++;
