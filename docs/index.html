@@ -432,6 +432,7 @@ function openModal(bot) {
   const buildCmd = isCron
     ? `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... REPO=owner/repo\n./${bot.name}   # health endpoint on :${bot.port}`
     : `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... WEBHOOK_SECRET=...\n./${bot.name}   # listens on :${bot.port}`;
+  const installCmd = `curl -L https://github.com/sanketpatel32/github-bot-store/releases/latest/download/${bot.name}-linux-amd64.tar.gz | tar xz\nchmod +x ${bot.name}-linux-amd64\n./${bot.name}-linux-amd64`;
   const setupSection = isCron
     ? `<h4>Scheduling</h4>
     <ul>
@@ -451,8 +452,12 @@ function openModal(bot) {
     <h2>${bot.emoji} ${bot.name}</h2>
     <p class="desc">${bot.desc}</p>
 
-    <h4>Build &amp; run</h4>
-    <div class="codewrap"><button class="mcopy">copy</button><pre>${buildCmd}</pre></div>
+    <h4>Download prebuilt binary</h4>
+    <div class="codewrap"><button class="mcopy" data-copy="install">copy</button><pre>${installCmd}</pre></div>
+    <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code> — verify before deploying.</li></ul>
+
+    <h4>Or build from source</h4>
+    <div class="codewrap"><button class="mcopy" data-copy="build">copy</button><pre>${buildCmd}</pre></div>
 
     ${setupSection}
 
@@ -465,11 +470,13 @@ function openModal(bot) {
   document.body.style.overflow = "hidden";
   document.getElementById("close").focus();
 
-  modalContent.querySelector(".mcopy").onclick = (e) => {
-    navigator.clipboard.writeText(buildCmd);
-    e.target.textContent = "copied!";
-    setTimeout(() => e.target.textContent = "copy", 1500);
-  };
+  modalContent.querySelectorAll(".mcopy").forEach(btn => {
+    btn.onclick = (e) => {
+      navigator.clipboard.writeText(btn.dataset.copy === "install" ? installCmd : buildCmd);
+      e.target.textContent = "copied!";
+      setTimeout(() => e.target.textContent = "copy", 1500);
+    };
+  });
 }
 
 document.getElementById("close").onclick = closeModal;
