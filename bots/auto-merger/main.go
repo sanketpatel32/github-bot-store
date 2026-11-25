@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
@@ -31,6 +32,21 @@ type prInfo struct {
 	Labels []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
+}
+
+// mergeMethod reads MERGE_METHOD (squash|merge|rebase, default squash) —
+// validated at use so a typo can't silently pick the wrong strategy (#28).
+func mergeMethod() string {
+	m := os.Getenv("MERGE_METHOD")
+	switch m {
+	case "", "squash":
+		return "squash"
+	case "merge", "rebase":
+		return m
+	default:
+		log.Printf("MERGE_METHOD %q invalid — using squash", m)
+		return "squash"
+	}
 }
 
 func fetchPR(client *ghbot.Client, repo string, number int) (*prInfo, error) {
@@ -129,7 +145,7 @@ func tryMerge(client *ghbot.Client, repo string, number int) {
 	// pin the merge to the exact head we validated — if the branch moved
 	// since, GitHub rejects the merge instead of merging unreviewed commits
 	_, err = client.Do("PUT", fmt.Sprintf("/repos/%s/pulls/%d/merge", repo, number),
-		map[string]string{"merge_method": "squash", "sha": headSHA})
+		map[string]string{"merge_method": mergeMethod(), "sha": headSHA})
 	if err != nil {
 		log.Printf("merge PR #%d: %v", number, err)
 		return
