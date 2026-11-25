@@ -392,6 +392,10 @@ const BOTS = [
     desc: "Flags issues that sit untriaged — no label, assignee, or milestone — with a needs-triage label that clears itself once triaged.",
     events: "none (scheduled)", perms: "issues: write",
     notes: ["GRACE_HOURS configures the grace period (default 24)", "Self-cleaning: label removed when a human triages"] },
+  { name: "changelog-checker", emoji: "📋", type: "webhook", port: 8119, accent: "#3fb950",
+    desc: "Commit status enforcing every PR updates the changelog — or explicitly opts out with a skip label.",
+    events: "Pull requests", perms: "statuses: write, pulls: read",
+    notes: ["CHANGELOG_FILE and SKIP_LABEL are configurable", "Re-evaluates when labels change"] },
 ];
 
 const grid = document.getElementById("grid");
