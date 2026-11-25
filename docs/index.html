@@ -424,6 +424,10 @@ const BOTS = [
     desc: "Validates external links in new issues — one comment flags dead repro links before triage wastes time on them.",
     events: "Issues", perms: "issues: write",
     notes: ["Skips github.com links to save rate quota", "Edits re-check, comment updates in place"] },
+  { name: "issue-form-validator", emoji: "📝", type: "webhook", port: 8127, accent: "#e3b341",
+    desc: "Enforces your issue template — labels issues missing required sections, auto-clears when they fix it.",
+    events: "Issues", perms: "issues: write",
+    notes: ["REQUIRED_SECTIONS configures which headings must be filled", "Rejects placeholder content, not just empty sections"] },
 ];
 
 const grid = document.getElementById("grid");
