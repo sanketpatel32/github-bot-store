@@ -23,9 +23,9 @@ type genericEvent struct {
 }
 
 type prInfo struct {
-	State      string `json:"state"`
-	Mergeable  *bool  `json:"mergeable"`
-	Head       struct {
+	State     string `json:"state"`
+	Mergeable *bool  `json:"mergeable"`
+	Head      struct {
 		SHA string `json:"sha"`
 	} `json:"head"`
 	Labels []struct {
