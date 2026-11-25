@@ -28,7 +28,19 @@ func sweep(client *ghbot.Client, repo string, threshold int) {
 			PublishedAt time.Time `json:"published_at"`
 		}
 		if json.Unmarshal(body, &rel) == nil && rel.TagName != "" {
-			cmp, err := client.Do("GET", fmt.Sprintf("/repos/%s/compare/%s...HEAD", repo, rel.TagName), nil)
+			// compare against the default branch — literal HEAD is not a
+			// valid ref in the compare API
+			head := "main"
+			repoBody, err := client.Do("GET", fmt.Sprintf("/repos/%s", repo), nil)
+			if err == nil {
+				var r struct {
+					DefaultBranch string `json:"default_branch"`
+				}
+				if json.Unmarshal(repoBody, &r) == nil && r.DefaultBranch != "" {
+					head = r.DefaultBranch
+				}
+			}
+			cmp, err := client.Do("GET", fmt.Sprintf("/repos/%s/compare/%s...%s", repo, rel.TagName, head), nil)
 			if err == nil {
 				var c struct {
 					AheadBy int `json:"ahead_by"`
