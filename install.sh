@@ -24,16 +24,19 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 echo "downloading $bot-linux-$arch..."
-curl -fsSL "$base/$bot-linux-$arch.tar.gz" -o "$tmp/bot.tar.gz"
+archive="$bot-linux-$arch.tar.gz"
+curl -fsSL "$base/$archive" -o "$tmp/$archive"
 curl -fsSL "$base/checksums.txt" -o "$tmp/checksums.txt"
 
 echo "verifying checksum..."
-(cd "$tmp" && grep "$bot-linux-$arch" checksums.txt | sha256sum -c -) || {
+# sha256sum -c verifies by filename, so the archive must keep its release
+# name — renaming it before the check makes every valid download "fail".
+(cd "$tmp" && grep "$archive\$" checksums.txt | sha256sum -c -) || {
   echo "CHECKSUM MISMATCH — aborting"
   exit 1
 }
 
-tar -xzf "$tmp/bot.tar.gz" -C "$tmp"
+tar -xzf "$tmp/$archive" -C "$tmp"
 bin=$(ls "$tmp" | grep "$bot-linux" | grep -v tar.gz | head -1)
 echo "installing to $dir/$bot (may need sudo)..."
 if [ -w "$dir" ]; then
