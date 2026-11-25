@@ -244,6 +244,58 @@ func RunAction(name string, handler WebhookHandler) bool {
 	return true
 }
 
+// ---- durable webhook inbox (#69) ----
+
+// When SPOOL_DIR is set, every accepted delivery is written to disk before
+// processing and only deleted after the handler finishes — a crash or
+// restart no longer loses events: the spool is replayed on boot.
+type spooledEvent struct {
+	Event    string `json:"event"`
+	Delivery string `json:"delivery"`
+	Payload  []byte `json:"payload"`
+}
+
+func spoolPath(dir, delivery string) string {
+	return dir + "/" + strings.Map(func(r rune) rune {
+		if r == '/' || r == '\\' {
+			return -1
+		}
+		return r
+	}, delivery) + ".json"
+}
+
+func writeSpool(dir, event, delivery string, payload []byte) error {
+	data, err := json.Marshal(spooledEvent{event, delivery, payload})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(spoolPath(dir, delivery), data, 0o600)
+}
+
+// replaySpool re-processes any deliveries left over from a crash.
+func replaySpool(dir, name string, handler WebhookHandler) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(dir + "/" + e.Name())
+		if err != nil {
+			continue
+		}
+		var se spooledEvent
+		if json.Unmarshal(data, &se) != nil {
+			continue
+		}
+		log.Printf("[%s] replaying spooled delivery %s", name, se.Delivery)
+		handler(se.Event, se.Payload)
+		os.Remove(dir + "/" + e.Name())
+	}
+}
+
 // Serve starts the bot's HTTP server: POST /webhook plus GET /healthz.
 // A nonempty WEBHOOK_SECRET is required in production — unsigned webhooks
 // mean anyone who finds your port can trigger bot actions. Set
@@ -258,6 +310,10 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 	}
 	if cfg.Secret == "" {
 		log.Printf("[%s] WARNING: accepting unsigned webhooks (ALLOW_UNSIGNED_WEBHOOKS) — do not expose this port", name)
+	}
+	if dir := os.Getenv("SPOOL_DIR"); dir != "" {
+		os.MkdirAll(dir, 0o700)
+		replaySpool(dir, name, handler)
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -331,13 +387,22 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			return
 		}
 
+		spoolDir := os.Getenv("SPOOL_DIR")
+		if spoolDir != "" {
+			if err := writeSpool(spoolDir, event, deliveryID, body); err != nil {
+				log.Printf("[%s] spool write failed: %v", name, err)
+			}
+		}
 		job := func() {
 			defer func() {
 				if rec := recover(); rec != nil {
-					log.Printf("[%s] panic handling %s: %v", name, event, rec)
+					log.Printf("[%s] panic handling %s: %v — delivery stays in spool for replay", name, event, rec)
 				}
 			}()
 			handler(event, body)
+			if spoolDir != "" {
+				os.Remove(spoolPath(spoolDir, deliveryID))
+			}
 		}
 		if !dispatch(job) {
 			// workers saturated — 429 tells GitHub to retry later instead of
