@@ -7,3 +7,4 @@ flaky-state.json
 
 # built bot binaries (go build outputs land in repo root)
 /auto-merger /branch-sweeper /breaking-change-guard /changelog-checker /ci-failure-commenter /contributor-milestones /conventional-pr-check /dependency-update-grouper /docs-link-checker /duplicate-issue-hunter /first-touch-welcomer /flaky-test-tracker /issue-form-validator /issue-link-checker /issue-triage-reminder /keyword-issue-labeler /license-header-checker /merge-conflict-detector /pr-aging-bot /pr-path-labeler /pr-size-labeler /pr-template-checker /release-drafter /release-reminder /repo-digest /review-reminder /reviewer-assigner /stale-bot /todo-tracker
+.taste-skill/

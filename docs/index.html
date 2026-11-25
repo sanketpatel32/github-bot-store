@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta property="og:title" content="github-bot-store — tiny self-hosted GitHub automation bots">
-<meta property="og:description" content="29 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
+<meta property="og:description" content="32 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +11,7 @@
 <style>
   :root {
     --bg: #0a0c10; --surface: #11151c; --surface2: #171c26; --border: #232b3a;
-    --text: #e8edf4; --muted: #7d8aa0; --accent: #58a6ff; --accent2: #a371f7;
+    --text: #e8edf4; --muted: #93a1b8; --accent: #58a6ff; --accent2: #a371f7;
     --green: #3fb950; --orange: #d29922; --red: #f85149; --teal: #39c5cf;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   }
@@ -153,7 +153,7 @@
   }
   #search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,.15); }
   .fpill {
-    padding: 8px 16px; border-radius: 9px; border: 1px solid var(--border); cursor: pointer;
+    padding: 8px 16px; min-height: 38px; border-radius: 9px; border: 1px solid var(--border); cursor: pointer;
     background: var(--surface); color: var(--muted); font-size: .88rem; transition: all .15s;
   }
   .fpill:hover { color: var(--text); }
@@ -200,7 +200,7 @@
     display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
     background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: .9rem;
   }
-  .step h4 { font-size: 1rem; margin-bottom: 6px; }
+  .step .stephead { font-size: 1rem; margin-bottom: 6px; }
   .step p { color: var(--muted); font-size: .88rem; }
   .step code { font-family: var(--mono); font-size: .82em; background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
 
@@ -264,7 +264,7 @@
 
   footer { border-top: 1px solid var(--border); padding: 36px 0 44px; text-align: center; color: var(--muted); font-size: .88rem; }
   footer a { text-decoration: none; }
-    .card:focus-visible, .fpill:focus-visible, .mcopy:focus-visible {
+    .card:focus-visible, .fpill:focus-visible, .mcopy:focus-visible, .btn:focus-visible, #search:focus-visible, #permfilter:focus-visible, #close:focus-visible, .copy-btn:focus-visible, nav a:focus-visible {
     outline: 2px solid var(--accent); outline-offset: 2px;
   }
   .typebadge {
@@ -300,7 +300,7 @@
   <div class="container hero-inner">
     <div class="pill"><span class="live"></span> open source · self-hosted · zero dependencies</div>
     <h1>GitHub automation,<br><span class="grad">small enough for any server</span></h1>
-    <p class="tagline">32 single-binary bots in Go. Each idles at ~10MB of RAM — run the whole store on a $4 VPS, a Raspberry Pi, or that free-tier container you forgot about.</p>
+    <p class="tagline">32 single-binary bots in Go. Each idles at ~10MB of RAM, so the whole store fits on a $4 VPS, a Raspberry Pi, or that free-tier container you forgot about.</p>
     <div class="stats">
       <div class="stat"><div class="num" id="botcount">0</div><div class="label">bots</div></div>
       <div class="stat"><div class="num">~5MB</div><div class="label">per binary</div></div>
@@ -319,7 +319,7 @@
 <span class="p">$</span> <span class="cmd">git clone https://github.com/sanketpatel32/github-bot-store</span>
 <span class="p">$</span> <span class="cmd">cd github-bot-store</span>
 
-<span class="c"># build any bot — one static binary, nothing else</span>
+<span class="c"># build any bot: one static binary, nothing else</span>
 <span class="p">$</span> <span class="cmd">go build -o stale-bot ./bots/stale-bot</span>
 
 <span class="c"># configure &amp; run</span>
@@ -342,7 +342,7 @@
         <button class="fpill active" data-f="all">All</button>
         <button class="fpill" data-f="webhook">Webhook</button>
         <button class="fpill" data-f="cron">Cron</button>
-        <select id="permfilter" aria-label="Filter by permission" style="margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-family:var(--mono);font-size:.8rem">
+        <select id="permfilter" aria-label="Filter by permission" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-family:var(--mono);font-size:.8rem">
           <option value="">any permissions</option>
           <option value="issues: write">issues: write</option>
           <option value="pulls: read">pulls: read</option>
@@ -350,20 +350,20 @@
           <option value="checks: read">checks: read</option>
           <option value="contents">contents</option>
         </select>
-        <input id="search" type="text" placeholder="Search… try 'merge' or 'label'">
+        <input id="search" type="text" aria-label="Search bots" placeholder="Search… try 'merge' or 'label'">
       </div>
     </div>
     <div class="grid" id="grid"></div>
-    <div class="empty hidden" id="empty">No bots match — try a different search.</div>
+    <div class="empty hidden" id="empty">No bots match. Try a different search.</div>
   </section>
 
   <section class="how" id="how">
     <h2 class="section">How it works</h2>
     <div class="steps">
-      <div class="step"><div class="n">1</div><h4>Build one binary</h4><p><code>go build</code> any bot. No runtime, no node_modules, no pip — one static file you can <code>scp</code> anywhere.</p></div>
-      <div class="step"><div class="n">2</div><h4>Point a webhook at it</h4><p>Repo → Settings → Webhooks → <code>http://server:PORT/webhook</code>. HMAC signature verification is built in.</p></div>
-      <div class="step"><div class="n">3</div><h4>Forget it's there</h4><p>Each bot idles around 10MB RAM. Run all fifteen behind systemd or in tmux — your server won't notice.</p></div>
-      <div class="step"><div class="n">4</div><h4>Mix &amp; match</h4><p>Every bot is independent. Take one, take twelve, hack the <code>main.go</code> — they're short on purpose.</p></div>
+      <div class="step"><div class="n">1</div><h3 class="stephead">Build one binary</h3><p><code>go build</code> any bot. No runtime, no node_modules, no pip: one static file you can <code>scp</code> anywhere.</p></div>
+      <div class="step"><div class="n">2</div><h3 class="stephead">Point a webhook at it</h3><p>Repo → Settings → Webhooks → <code>http://server:PORT/webhook</code>. HMAC signature verification is built in.</p></div>
+      <div class="step"><div class="n">3</div><h3 class="stephead">Forget it's there</h3><p>Each bot idles around 10MB RAM. Run all 32 behind systemd or in tmux; your server won't notice.</p></div>
+      <div class="step"><div class="n">4</div><h3 class="stephead">Mix &amp; match</h3><p>Every bot is independent. Take one, take twelve, hack the <code>main.go</code>; they're short on purpose.</p></div>
     </div>
   </section>
 
@@ -379,10 +379,10 @@
 
   <section id="generator" style="max-width:720px;margin:60px auto 0;padding:0 24px 40px">
     <h3 style="font-family:var(--mono);margin-bottom:6px">⚙️ config generator</h3>
-    <p style="color:var(--muted);font-size:.9rem;margin-bottom:14px">Pick a bot and a deployment style — get a ready-to-paste configuration.</p>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:14px">Pick a bot and a deployment style, get a ready-to-paste configuration.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <select id="genbot" style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)"></select>
-      <select id="genmode" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)">
+      <select id="genbot" aria-label="Choose a bot" style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)"></select>
+      <select id="genmode" aria-label="Choose a deployment style" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)">
         <option value="binary">binary + systemd</option>
         <option value="docker">docker compose</option>
         <option value="action">github action (zero servers)</option>
@@ -393,7 +393,7 @@
 
   <footer>
   <div class="container">
-    Built with Go and zero dependencies · <a href="https://github.com/sanketpatel32/github-bot-store">sanketpatel32/github-bot-store</a>
+    github-bot-store · 32 bots · MIT · <a href="https://github.com/sanketpatel32/github-bot-store">sanketpatel32/github-bot-store</a>
   </div>
 </footer>
 
