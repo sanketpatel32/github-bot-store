@@ -6,6 +6,10 @@ metadata:
   labels: { app: {{ .name }} }
 spec:
   replicas: 1   # bots are singletons — leaderless scaling is not safe for mutations
+  strategy:
+    # RollingUpdate (the default) briefly runs the old and new pod together —
+    # two independently mutating workers. Recreate kills the old one first (#117)
+    type: Recreate
   selector:
     matchLabels: { app: {{ .name }} }
   template:
