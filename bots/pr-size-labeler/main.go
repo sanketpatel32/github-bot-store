@@ -17,8 +17,8 @@ type PREvent struct {
 		FullName string `json:"full_name"`
 	} `json:"repository"`
 	PR struct {
-		Additions int `json:"additions"`
-		Deletions int `json:"deletions"`
+		Additions int    `json:"additions"`
+		Deletions int    `json:"deletions"`
 		Title     string `json:"title"`
 	} `json:"pull_request"`
 }

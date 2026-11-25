@@ -15,14 +15,14 @@ import (
 )
 
 type item struct {
-	Number  int       `json:"number"`
-	Title   string    `json:"title"`
-	State   string    `json:"state"`
-	User    struct{ Login string } `json:"user"`
-	PR      *struct {
+	Number int                    `json:"number"`
+	Title  string                 `json:"title"`
+	State  string                 `json:"state"`
+	User   struct{ Login string } `json:"user"`
+	PR     *struct {
 		MergedAt *time.Time `json:"merged_at"`
 	} `json:"pull_request"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time  `json:"created_at"`
 	ClosedAt  *time.Time `json:"closed_at"`
 }
 

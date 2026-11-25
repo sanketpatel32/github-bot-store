@@ -15,16 +15,16 @@ import (
 )
 
 type PushEvent struct {
-	Ref    string `json:"ref"`
-	Repo   struct {
+	Ref  string `json:"ref"`
+	Repo struct {
 		FullName      string `json:"full_name"`
 		DefaultBranch string `json:"default_branch"`
 	} `json:"repository"`
 	Commits []struct {
-		ID      string `json:"id"`
-		URL     string `json:"url"`
+		ID      string                    `json:"id"`
+		URL     string                    `json:"url"`
 		Author  struct{ Username string } `json:"author"`
-		Message string `json:"message"`
+		Message string                    `json:"message"`
 	} `json:"commits"`
 }
 

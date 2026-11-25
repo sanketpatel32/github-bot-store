@@ -27,9 +27,11 @@ func envInt(key string, fallback int) int {
 }
 
 type issue struct {
-	Number    int    `json:"number"`
+	Number    int       `json:"number"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Labels    []struct{ Name string `json:"name"` } `json:"labels"`
+	Labels    []struct {
+		Name string `json:"name"`
+	} `json:"labels"`
 	PullRequest *struct{} `json:"pull_request"`
 }
 

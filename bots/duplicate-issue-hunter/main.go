@@ -17,8 +17,8 @@ import (
 type IssueEvent struct {
 	Action string `json:"action"`
 	Issue  struct {
-		Number int    `json:"number"`
-		Title  string `json:"title"`
+		Number int                    `json:"number"`
+		Title  string                 `json:"title"`
 		User   struct{ Login string } `json:"user"`
 	} `json:"issue"`
 	Repo struct {

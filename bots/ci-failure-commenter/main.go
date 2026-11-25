@@ -15,19 +15,19 @@ import (
 const marker = "<!-- ci-failure-commenter -->"
 
 type CheckEvent struct {
-	Action    string `json:"action"`
-	CheckRun  *struct {
-		HeadSHA     string `json:"head_sha"`
-		Conclusion  string `json:"conclusion"`
-		Name        string `json:"name"`
-		HTMLURL     string `json:"html_url"`
+	Action   string `json:"action"`
+	CheckRun *struct {
+		HeadSHA      string `json:"head_sha"`
+		Conclusion   string `json:"conclusion"`
+		Name         string `json:"name"`
+		HTMLURL      string `json:"html_url"`
 		PullRequests []struct {
 			Number int `json:"number"`
 		} `json:"pull_requests"`
 	} `json:"check_run"`
 	CheckSuite *struct {
-		HeadSHA     string `json:"head_sha"`
-		Conclusion  string `json:"conclusion"`
+		HeadSHA      string `json:"head_sha"`
+		Conclusion   string `json:"conclusion"`
 		PullRequests []struct {
 			Number int `json:"number"`
 		} `json:"pull_requests"`

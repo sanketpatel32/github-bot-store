@@ -15,9 +15,9 @@ import (
 type PREvent struct {
 	Action string `json:"action"`
 	PR     struct {
-		Merged bool   `json:"merged"`
-		Title  string `json:"title"`
-		Number int    `json:"number"`
+		Merged bool                   `json:"merged"`
+		Title  string                 `json:"title"`
+		Number int                    `json:"number"`
 		User   struct{ Login string } `json:"user"`
 	} `json:"pull_request"`
 	Repo struct {

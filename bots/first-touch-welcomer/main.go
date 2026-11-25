@@ -14,14 +14,14 @@ import (
 type event struct {
 	Action string `json:"action"`
 	Issue  *struct {
-		Number int    `json:"number"`
+		Number int                    `json:"number"`
 		User   struct{ Login string } `json:"user"`
-		Author string `json:"author_association"`
+		Author string                 `json:"author_association"`
 	} `json:"issue"`
 	PR *struct {
-		Number int    `json:"number"`
+		Number int                    `json:"number"`
 		User   struct{ Login string } `json:"user"`
-		Author string `json:"author_association"`
+		Author string                 `json:"author_association"`
 	} `json:"pull_request"`
 	Repo struct {
 		FullName string `json:"full_name"`

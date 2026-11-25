@@ -15,8 +15,8 @@ type PREvent struct {
 	Action string `json:"action"`
 	Number int    `json:"number"`
 	PR     struct {
-		Body  string `json:"body"`
-		Title string `json:"title"`
+		Body  string                 `json:"body"`
+		Title string                 `json:"title"`
 		User  struct{ Login string } `json:"user"`
 	} `json:"pull_request"`
 	Repo struct {

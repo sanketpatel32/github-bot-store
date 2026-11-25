@@ -17,15 +17,21 @@ type genericEvent struct {
 		FullName string `json:"full_name"`
 	} `json:"repository"`
 	PR *struct {
-		Number int    `json:"number"`
-		Labels []struct{ Name string `json:"name"` } `json:"labels"`
+		Number int `json:"number"`
+		Labels []struct {
+			Name string `json:"name"`
+		} `json:"labels"`
 	} `json:"pull_request"`
 }
 
 type prInfo struct {
 	State  string `json:"state"`
-	Labels []struct{ Name string `json:"name"` } `json:"labels"`
-	Head   struct{ SHA string `json:"sha"` } `json:"head"`
+	Labels []struct {
+		Name string `json:"name"`
+	} `json:"labels"`
+	Head struct {
+		SHA string `json:"sha"`
+	} `json:"head"`
 }
 
 func fetchPR(client *ghbot.Client, repo string, number int) (*prInfo, error) {
@@ -112,7 +118,9 @@ func main() {
 				return
 			}
 			for _, raw := range items {
-				var pr struct{ Number int `json:"number"` }
+				var pr struct {
+					Number int `json:"number"`
+				}
 				if json.Unmarshal(raw, &pr) == nil {
 					tryMerge(client, repo, pr.Number)
 				}
