@@ -70,6 +70,15 @@ func sweep(client *ghbot.Client, repo string, graceHours int) {
 	log.Printf("triage sweep complete")
 }
 
+// sweepInterval reads SWEEP_INTERVAL_HOURS (default 24).
+func sweepInterval() time.Duration {
+	h := 24
+	if v := os.Getenv("SWEEP_INTERVAL_HOURS"); v != "" {
+		fmt.Sscanf(v, "%d", &h)
+	}
+	return time.Duration(h) * time.Hour
+}
+
 func main() {
 	cfg := ghbot.LoadConfig("issue-triage-reminder", "8118")
 	if ghbot.HandleCLIArgs("issue-triage-reminder", cfg) {
@@ -84,9 +93,5 @@ func main() {
 	if v := os.Getenv("GRACE_HOURS"); v != "" {
 		fmt.Sscanf(v, "%d", &grace)
 	}
-	sweep(client, repo, grace)
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		return
-	}
-	ghbot.ServeHealth(cfg, "issue-triage-reminder")
+	ghbot.ServeCron(cfg, "issue-triage-reminder", sweepInterval(), func() { sweep(client, repo, grace) })
 }

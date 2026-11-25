@@ -92,6 +92,15 @@ _This issue updates itself; close it when you release._`,
 	}
 }
 
+// sweepInterval reads SWEEP_INTERVAL_HOURS (default 24).
+func sweepInterval() time.Duration {
+	h := 24
+	if v := os.Getenv("SWEEP_INTERVAL_HOURS"); v != "" {
+		fmt.Sscanf(v, "%d", &h)
+	}
+	return time.Duration(h) * time.Hour
+}
+
 func main() {
 	cfg := ghbot.LoadConfig("release-reminder", "8124")
 	if ghbot.HandleCLIArgs("release-reminder", cfg) {
@@ -106,9 +115,5 @@ func main() {
 	if v := os.Getenv("THRESHOLD_COMMITS"); v != "" {
 		fmt.Sscanf(v, "%d", &threshold)
 	}
-	sweep(client, repo, threshold)
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		return
-	}
-	ghbot.ServeHealth(cfg, "release-reminder")
+	ghbot.ServeCron(cfg, "release-reminder", sweepInterval(), func() { sweep(client, repo, threshold) })
 }

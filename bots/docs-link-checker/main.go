@@ -177,6 +177,15 @@ func sweep(gh *ghbot.Client, repo, branch string) {
 	log.Printf("scan complete: %d broken links", len(results))
 }
 
+// sweepInterval reads SWEEP_INTERVAL_HOURS (default 24).
+func sweepInterval() time.Duration {
+	h := 24
+	if v := os.Getenv("SWEEP_INTERVAL_HOURS"); v != "" {
+		fmt.Sscanf(v, "%d", &h)
+	}
+	return time.Duration(h) * time.Hour
+}
+
 func main() {
 	cfg := ghbot.LoadConfig("docs-link-checker", "8125")
 	if ghbot.HandleCLIArgs("docs-link-checker", cfg) {
@@ -191,9 +200,5 @@ func main() {
 	if branch == "" {
 		branch = "main"
 	}
-	sweep(client, repo, branch)
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		return
-	}
-	ghbot.ServeHealth(cfg, "docs-link-checker")
+	ghbot.ServeCron(cfg, "docs-link-checker", sweepInterval(), func() { sweep(client, repo, branch) })
 }

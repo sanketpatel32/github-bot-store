@@ -87,6 +87,15 @@ func sweep(client *ghbot.Client, repo string) {
 	}
 }
 
+// sweepInterval reads SWEEP_INTERVAL_HOURS (default 24).
+func sweepInterval() time.Duration {
+	h := 24
+	if v := os.Getenv("SWEEP_INTERVAL_HOURS"); v != "" {
+		fmt.Sscanf(v, "%d", &h)
+	}
+	return time.Duration(h) * time.Hour
+}
+
 func main() {
 	cfg := ghbot.LoadConfig("pr-aging-bot", "8116")
 	if ghbot.HandleCLIArgs("pr-aging-bot", cfg) {
@@ -97,11 +106,5 @@ func main() {
 	if repo == "" {
 		log.Fatal("REPO is not set (owner/repo)")
 	}
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		sweep(client, repo)
-		return
-	}
-	sweep(client, repo)
-	log.Printf("sweep complete — health server keeps running")
-	ghbot.ServeHealth(cfg, "pr-aging-bot")
+	ghbot.ServeCron(cfg, "pr-aging-bot", sweepInterval(), func() { sweep(client, repo) })
 }

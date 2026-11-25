@@ -145,6 +145,36 @@ func (c *Client) recordAPI() {
 	metrics.Unlock()
 }
 
+// ---- persistent scheduler (#75) ----
+
+// ServeCron runs fn once immediately, then on every interval, while serving
+// the health/metrics endpoints — cron bots become single long-running
+// one-shot executions instead of needing an external crontab. In GitHub
+// Actions mode it runs fn exactly once and returns (the workflow schedule
+// is the timer).
+func ServeCron(cfg Config, name string, interval time.Duration, fn func()) {
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		fn()
+		return
+	}
+	go func() {
+		for {
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Printf("[%s] panic in scheduled run: %v — continuing", name, rec)
+					}
+				}()
+				fn()
+			}()
+			jitter := time.Duration(rand.Int63n(int64(interval / 10)))
+			time.Sleep(interval + jitter)
+		}
+	}()
+	log.Printf("[%s] scheduled every %s (with jitter)", name, interval)
+	ServeHealth(cfg, name)
+}
+
 // ---- CLI conveniences: version + doctor (#44) ----
 
 // Version is stamped at build time: go build -ldflags "-X ghbot.Version=x.y.z"
