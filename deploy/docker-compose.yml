@@ -28,6 +28,11 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN}
       REPO: ${REPO}
       PORT: "8103"
+      # close timers live in a state file — without a volume every container
+      # recreation resets them, making close timing unreliable (#139)
+      STATE_FILE: /state/stale-state.json
+    volumes:
+      - stale-state:/state
     ports: ["8103:8103"]
     restart: unless-stopped
 
@@ -48,5 +53,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  stale-state:
   spool-size:
   spool-merge:

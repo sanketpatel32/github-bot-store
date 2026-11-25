@@ -61,23 +61,32 @@ func hasLabel(i issue, name string) bool {
 // state tracks when each issue/PR number was marked stale, so close timing
 // and activity detection don't depend on updated_at alone (which our own
 // bot comments also bump).
+// keys are repo-scoped ("owner/repo#123") — reusing a working directory
+// across repositories must never apply repo A's close timer to repo B's
+// same-numbered issue (#139)
 type state struct {
 	mu     sync.Mutex
-	Marked map[int]time.Time `json:"marked"`
+	Marked map[string]time.Time `json:"marked"`
 	path   string
+	repo   string
 }
 
-func loadState(path string) *state {
-	s := &state{Marked: map[int]time.Time{}, path: path}
+func (s *state) key(number int) string { return s.repo + "#" + fmt.Sprint(number) }
+
+func loadState(path, repo string) *state {
+	s := &state{Marked: map[string]time.Time{}, path: path, repo: repo}
 	if data, err := os.ReadFile(path); err == nil {
 		var raw map[string]string
 		if json.Unmarshal(data, &raw) == nil {
 			for k, v := range raw {
 				var num int
 				if _, err := fmt.Sscanf(k, "%d", &num); err == nil {
-					if t, err := time.Parse(time.RFC3339, v); err == nil {
-						s.Marked[num] = t
-					}
+					// legacy unscoped key — belongs to the repo this state
+					// file was always written for
+					k = repo + "#" + k
+				}
+				if t, err := time.Parse(time.RFC3339, v); err == nil {
+					s.Marked[k] = t
 				}
 			}
 		}
@@ -87,8 +96,8 @@ func loadState(path string) *state {
 
 func (s *state) save() {
 	raw := map[string]string{}
-	for num, t := range s.Marked {
-		raw[fmt.Sprint(num)] = t.UTC().Format(time.RFC3339)
+	for k, t := range s.Marked {
+		raw[k] = t.UTC().Format(time.RFC3339)
 	}
 	if data, err := json.Marshal(raw); err == nil {
 		os.WriteFile(s.path, data, 0o600)
@@ -158,7 +167,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 			exempt = true
 		}
 
-		markedAt, isMarked := st.Marked[i.Number]
+		markedAt, isMarked := st.Marked[st.key(i.Number)]
 
 		if isMarked {
 			// policy may have changed since marking — a newly configured
@@ -170,7 +179,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 					continue
 				}
 				client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/stale", repo, i.Number), nil)
-				delete(st.Marked, i.Number)
+				delete(st.Marked, st.key(i.Number))
 				st.save()
 				log.Printf("un-staled %s #%d (newly exempt)", kind, i.Number)
 				continue
@@ -185,7 +194,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 					continue
 				}
 				client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/stale", repo, i.Number), nil)
-				delete(st.Marked, i.Number)
+				delete(st.Marked, st.key(i.Number))
 				st.save()
 				log.Printf("un-staled %s #%d (activity)", kind, i.Number)
 				continue
@@ -199,7 +208,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 					"Closing due to inactivity. Happy to reopen if there's interest — just comment.")
 				client.Do("PATCH", fmt.Sprintf("/repos/%s/issues/%d", repo, i.Number),
 					map[string]string{"state": "closed"})
-				delete(st.Marked, i.Number)
+				delete(st.Marked, st.key(i.Number))
 				st.save()
 				log.Printf("closed %s #%d", kind, i.Number)
 				ghbot.Notify("stale-bot", fmt.Sprintf("closed stale issue #%d in %s", i.Number, repo))
@@ -215,7 +224,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 		// API `since` param selects *recently updated* items, the opposite)
 		if hasLabel(i, "stale") {
 			// labeled stale externally — adopt it into state
-			st.Marked[i.Number] = i.UpdatedAt
+			st.Marked[st.key(i.Number)] = i.UpdatedAt
 			st.save()
 			continue
 		}
@@ -232,7 +241,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 				kind, staleDays, closeDays))
 			// record the mark only after the comment lands — everything after
 			// this timestamp is genuinely new activity, no guessing window
-			st.Marked[i.Number] = time.Now()
+			st.Marked[st.key(i.Number)] = time.Now()
 			st.save()
 			log.Printf("marked %s #%d stale", kind, i.Number)
 		}
@@ -257,7 +266,11 @@ func main() {
 	if opts.dryRun {
 		log.Printf("DRY_RUN enabled — logging actions without writing to GitHub")
 	}
-	st := loadState("stale-state.json")
+	statePath := os.Getenv("STATE_FILE")
+	if statePath == "" {
+		statePath = "stale-state.json"
+	}
+	st := loadState(statePath, repo)
 
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
 		log.Printf("sweeping %s once (actions mode)", repo)
