@@ -209,6 +209,25 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 		event := r.Header.Get("X-GitHub-Event")
 		deliveryID := r.Header.Get("X-GitHub-Delivery")
 
+		// feedback-loop prevention (#70): bots reacting to bot-authored
+		// events can loop forever (bot comments -> triggers another bot ->
+		// comments again). Skip events whose sender is a GitHub App/bot,
+		// unless SKIP_BOT_EVENTS=false is explicitly set.
+		if os.Getenv("SKIP_BOT_EVENTS") != "false" {
+			var meta struct {
+				Sender struct {
+					Type  string `json:"type"`
+					Login string `json:"login"`
+				} `json:"sender"`
+			}
+			if json.Unmarshal(body, &meta) == nil &&
+				(meta.Sender.Type == "Bot" || strings.HasSuffix(meta.Sender.Login, "[bot]")) {
+				log.Printf("[%s] skipping bot-authored %s event from %s", name, event, meta.Sender.Login)
+				w.WriteHeader(http.StatusAccepted)
+				return
+			}
+		}
+
 		// dedupe redeliveries — GitHub retries on timeouts and users click
 		// "redeliver"; without this every retry repeats the bot's actions
 		if seenDelivery(deliveryID) {
