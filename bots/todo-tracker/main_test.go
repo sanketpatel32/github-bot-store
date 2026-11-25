@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParsePatch(t *testing.T) {
 	patch := `@@ -10,6 +10,8 @@ func example() {
@@ -53,6 +56,24 @@ func TestScannable(t *testing.T) {
 	for _, no := range []string{"docs/bots/todo-tracker.html", "README.md", "go.sum", "manifest.json"} {
 		if scannable(no) {
 			t.Errorf("%s should NOT be scannable — false positive source", no)
+		}
+	}
+}
+
+func TestParsePatchSkipsProseAndEmptyMarkers(t *testing.T) {
+	patch := `+// TODO: implement retry backoff — this one is real
++// TODO/FIXME as words, which the scanner mentions in prose
++// the word TODO appears mid-sentence here
++// TODO
++	//FIXME
++# TODO: another real one`
+	added, _ := parsePatch(patch)
+	if len(added) != 2 {
+		t.Fatalf("want exactly 2 real TODOs, got %d: %v", len(added), added)
+	}
+	for _, a := range added {
+		if strings.Contains(a, "prose") || strings.Contains(a, "mid-sentence") {
+			t.Errorf("prose leaked through: %q", a)
 		}
 	}
 }

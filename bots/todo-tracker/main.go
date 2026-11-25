@@ -38,6 +38,19 @@ type PushEvent struct {
 // by the patch parser, never regexed out of raw text.
 var todoRe = regexp.MustCompile(`(?:TODO|FIXME)\b[:\s]?(.*)`)
 
+// commentNoise is everything that may precede a marker for it to still count
+// as a real TODO comment: comment openers and decoration. If anything else
+// (letters, words) comes before it, the marker is prose mentioning TODO —
+// e.g. a comment explaining the scanner itself (#105).
+func isCommentPrefix(s string) bool {
+	for _, r := range s {
+		if !strings.ContainsRune(" \t/*#-;<!()'\"`+", r) {
+			return false
+		}
+	}
+	return true
+}
+
 func marker(hash string) string { return markerPrefix + hash + " -->" }
 
 func todoHash(file, text string) string {
@@ -77,13 +90,20 @@ func parsePatch(patch string) (added, removed []string) {
 		}
 		sign := line[0]
 		content := line[1:]
-		m := todoRe.FindStringSubmatch(content)
-		if m == nil {
+		loc := todoRe.FindStringSubmatchIndex(content)
+		if loc == nil {
 			continue
 		}
-		text := strings.TrimSpace(m[1])
-		if text == "" {
-			text = "(no description)"
+		// the marker must be the first thing a comment says — matches buried
+		// in prose (like this very sentence) are not tasks (#105)
+		if !isCommentPrefix(content[:loc[0]]) {
+			continue
+		}
+		text := strings.TrimSpace(content[loc[2]:loc[3]])
+		if len([]rune(text)) < 4 {
+			// empty or one-word markers carry no actionable content and only
+			// create noise issues (#105)
+			continue
 		}
 		switch sign {
 		case '+':
