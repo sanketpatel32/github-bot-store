@@ -471,6 +471,10 @@ const BOTS = [
     desc: "Keeps discussions from rotting — one self-updating issue lists questions nobody has answered.",
     events: "none (scheduled)", perms: "discussions: read, issues: write",
     notes: ["Uses the GraphQL API — discussions aren't in REST", "Verified live against github-bot-store itself"] },
+  { name: "project-board-sync", emoji: "🗃", type: "webhook", port: 8132, accent: "#e3b341",
+    desc: "Keeps Projects v2 boards honest — new issues/PRs appear automatically, cards move as work progresses.",
+    events: "Issues, pull requests", perms: "issues: read, pulls: read, projects: write",
+    notes: ["Assigned work moves to In Progress, closed/merged to Done", "GraphQL-powered; degrades gracefully if the board has no Status field"] },
 
 ];
 

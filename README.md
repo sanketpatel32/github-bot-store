@@ -39,6 +39,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [flaky-test-tracker](bots/flaky-test-tracker) | Catches flaky CI — checks that pass on retry with zero code changes — and files tracking issues. | webhook |
 | [merge-queue-assistant](bots/merge-queue-assistant) | A minimal merge queue — label PRs queue/merge and the bot enforces FIFO order with queue/next promotion. | webhook |
 | [discussion-triage-bot](bots/discussion-triage-bot) | Keeps discussions from rotting — one self-updating issue lists questions nobody has answered. | cron |
+| [project-board-sync](bots/project-board-sync) | Keeps Projects v2 boards honest — new issues/PRs appear automatically, cards move as work progresses. | webhook |
 
 ## Automations
 
