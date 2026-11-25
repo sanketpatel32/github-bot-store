@@ -86,6 +86,30 @@ func seenDelivery(id string) bool {
 	return false
 }
 
+// ---- per-resource mutation coordination (#72) ----
+
+var resourceLocks = struct {
+	sync.Mutex
+	locks map[string]*sync.Mutex
+}{locks: map[string]*sync.Mutex{}}
+
+// WithResourceLock serializes mutations against the same logical resource
+// (e.g. "owner/repo#123") across all goroutines in this process — two
+// webhook deliveries for the same PR can't double-comment or race label
+// updates when they arrive together (#72).
+func WithResourceLock(key string, fn func()) {
+	resourceLocks.Lock()
+	mu, ok := resourceLocks.locks[key]
+	if !ok {
+		mu = &sync.Mutex{}
+		resourceLocks.locks[key] = mu
+	}
+	resourceLocks.Unlock()
+	mu.Lock()
+	defer mu.Unlock()
+	fn()
+}
+
 // newServer builds an http.Server with production timeouts — slow-client
 // and slowloris resistance out of the box.
 func newServer(port string, handler http.Handler) *http.Server {

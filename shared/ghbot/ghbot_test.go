@@ -1,6 +1,8 @@
 package ghbot
 
 import (
+	"sync"
+	"time"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -82,5 +84,34 @@ func TestDispatchSaturation(t *testing.T) {
 	close(block)
 	if !refused {
 		t.Error("saturated queue must refuse instead of dropping silently")
+	}
+}
+
+func TestWithResourceLock(t *testing.T) {
+	var mu sync.Mutex
+	inFlight := 0
+	maxInFlight := 0
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			WithResourceLock("owner/repo#1", func() {
+				mu.Lock()
+				inFlight++
+				if inFlight > maxInFlight {
+					maxInFlight = inFlight
+				}
+				mu.Unlock()
+				time.Sleep(time.Millisecond)
+				mu.Lock()
+				inFlight--
+				mu.Unlock()
+			})
+		}()
+	}
+	wg.Wait()
+	if maxInFlight != 1 {
+		t.Errorf("resource lock violated: maxInFlight=%d", maxInFlight)
 	}
 }
