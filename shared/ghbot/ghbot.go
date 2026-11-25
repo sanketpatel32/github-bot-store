@@ -19,6 +19,19 @@ import (
 	"time"
 )
 
+// newServer builds an http.Server with production timeouts — slow-client
+// and slowloris resistance out of the box.
+func newServer(port string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              ":" + port,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+}
+
 // Config holds the environment configuration all bots share.
 type Config struct {
 	Token  string
@@ -70,7 +83,7 @@ func ServeHealth(cfg Config, name string) {
 		fmt.Fprintln(w, "ok")
 	})
 	log.Printf("[%s] health-only server listening on :%s", name, cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
 
 // Serve starts the bot's HTTP server: POST /webhook plus GET /healthz.
@@ -94,9 +107,17 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		body, err := io.ReadAll(io.LimitReader(r.Body, 10<<20))
-		if err != nil {
-			http.Error(w, "read error", http.StatusBadRequest)
+		if r.ContentLength > 1<<20 {
+			http.Error(w, "payload too large (1MB max)", http.StatusRequestEntityTooLarge)
+			return
+		}
+		if r.Header.Get("X-GitHub-Event") == "" || r.Header.Get("X-GitHub-Delivery") == "" {
+			http.Error(w, "missing github event headers", http.StatusBadRequest)
+			return
+		}
+		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20+1))
+		if err != nil || int64(len(body)) > 1<<20 {
+			http.Error(w, "payload too large or unreadable", http.StatusRequestEntityTooLarge)
 			return
 		}
 		if !VerifySignature(cfg.Secret, body, r.Header.Get("X-Hub-Signature-256")) {
@@ -115,7 +136,7 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 		w.WriteHeader(http.StatusAccepted)
 	})
 	log.Printf("[%s] listening on :%s", name, cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
 
 // Client is a minimal authenticated GitHub REST client.
