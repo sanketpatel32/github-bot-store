@@ -81,8 +81,13 @@ func seenDelivery(id string) bool {
 // newServer builds an http.Server with production timeouts — slow-client
 // and slowloris resistance out of the box.
 func newServer(port string, handler http.Handler) *http.Server {
+	bind := os.Getenv("BIND_ADDR") // e.g. "127.0.0.1" — default listens on all interfaces
+	addr := ":" + port
+	if bind != "" {
+		addr = bind + ":" + port
+	}
 	return &http.Server{
-		Addr:              ":" + port,
+		Addr:              addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
@@ -152,7 +157,7 @@ func ServeHealth(cfg Config, name string) {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
-	log.Printf("[%s] health-only server listening on :%s", name, cfg.Port)
+	log.Printf("[%s] health-only server listening on %s", name, newServer(cfg.Port, nil).Addr)
 	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
 
@@ -279,7 +284,7 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 		}
 		w.WriteHeader(http.StatusAccepted)
 	})
-	log.Printf("[%s] listening on :%s", name, cfg.Port)
+	log.Printf("[%s] listening on %s", name, newServer(cfg.Port, nil).Addr)
 	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
 
