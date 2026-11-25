@@ -1,0 +1,71 @@
+{
+ "GET /repos/example/demo/pulls/7/files": [
+  {
+   "filename": "src/module0.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module1.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module2.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module3.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module4.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module5.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module6.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  },
+  {
+   "filename": "src/module7.go",
+   "additions": 120,
+   "deletions": 30,
+   "status": "modified",
+   "patch": "@@ x"
+  }
+ ],
+ "GET /repos/example/demo/issues/7/labels": [],
+ "GET /repos/example/demo/labels/size": {
+  "name": "size/XL"
+ },
+ "GET /rate_limit": {
+  "resources": {
+   "core": {
+    "remaining": 4999
+   }
+  }
+ }
+}

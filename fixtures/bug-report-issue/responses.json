@@ -1,0 +1,8 @@
+{
+  "GET /repos/example/demo/issues/42/comments": [],
+  "GET /repos/example/demo/labels": [
+    { "name": "bug" },
+    { "name": "invalid-issue" }
+  ],
+  "GET /rate_limit": { "resources": { "core": { "remaining": 4999 } } }
+}

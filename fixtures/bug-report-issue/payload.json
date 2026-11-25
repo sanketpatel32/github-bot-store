@@ -1,0 +1,13 @@
+{
+  "action": "opened",
+  "issue": {
+    "number": 42,
+    "title": "Bot crashes on startup with nil pointer",
+    "body": "### What happened?\n\nThe bot crashes immediately. This is a bug — it panics with a nil pointer dereference when the config file is missing.\n\n### Logs\n\npanic: runtime error",
+    "pull_request": null,
+    "user": { "login": "octocat" },
+    "labels": []
+  },
+  "repository": { "full_name": "example/demo" },
+  "sender": { "login": "octocat", "type": "User" }
+}
