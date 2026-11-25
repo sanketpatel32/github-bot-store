@@ -31,6 +31,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [pr-path-labeler](bots/pr-path-labeler) | Labels PRs by touched directories | webhook |
 | [contributor-milestones](bots/contributor-milestones) | Celebrates merged-PR milestones | webhook |
 | [breaking-change-guard](bots/breaking-change-guard) | Requires acknowledgment of breaking changes | webhook |
+| [release-reminder](bots/release-reminder) | Reminds you when unreleased commits pile up | cron |
 
 ## Automations
 

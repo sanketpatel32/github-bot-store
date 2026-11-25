@@ -412,6 +412,10 @@ const BOTS = [
     desc: "Blocks merges that declare breaking changes until a maintainer acknowledges with the breaking-change label.",
     events: "Pull requests", perms: "statuses: write, pulls: read, issues: write",
     notes: ["Detects feat!: titles and BREAKING CHANGE footers", "Re-checks on label changes so acknowledgment flips it green"] },
+  { name: "release-reminder", emoji: "🚀", type: "cron", port: 8124, accent: "#3fb950",
+    desc: "Opens a tracking issue when unreleased commits pile up — closes itself once you ship.",
+    events: "none (scheduled)", perms: "contents: read, issues: write",
+    notes: ["THRESHOLD_COMMITS sets the trigger (default 20)", "Updates one managed issue instead of spamming"] },
 ];
 
 const grid = document.getElementById("grid");
