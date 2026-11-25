@@ -186,6 +186,7 @@
     max-width: 720px; margin: 0 auto; background: var(--surface);
     border: 1px solid var(--border); border-radius: 16px; padding: 34px;
     box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    max-height: calc(100vh - 100px); overflow-y: auto; overscroll-behavior: contain;
   }
   #modal h2 { font-family: var(--mono); display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 1.35rem; }
   #modal .desc { color: var(--muted); margin-bottom: 18px; }
@@ -413,7 +414,25 @@ function render() {
 }
 
 function openModal(bot) {
-  const buildCmd = `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... WEBHOOK_SECRET=...\n./${bot.name}   # listens on :${bot.port}`;
+  const isCron = bot.type === "cron";
+  const buildCmd = isCron
+    ? `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... REPO=owner/repo\n./${bot.name}   # health endpoint on :${bot.port}`
+    : `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... WEBHOOK_SECRET=...\n./${bot.name}   # listens on :${bot.port}`;
+  const setupSection = isCron
+    ? `<h4>Scheduling</h4>
+    <ul>
+      <li>This bot runs on a schedule, not webhooks — it sweeps your repo periodically.</li>
+      <li>Zero-server option: it already runs as a GitHub Action — copy the job from <code>.github/workflows/bots-cron.yml</code> (nightly at 03:17 UTC).</li>
+      <li>Or cron it yourself: <code>17 3 * * * cd /opt/bots && GITHUB_TOKEN=... REPO=owner/repo ./${bot.name}</code></li>
+      <li>Permissions: <code>${bot.perms}</code></li>
+    </ul>`
+    : `<h4>Webhook setup</h4>
+    <ul>
+      <li>URL: <code>http://your-server:${bot.port}/webhook</code> · content type <code>application/json</code></li>
+      <li>Events: <b>${bot.events}</b></li>
+      <li>Permissions: <code>${bot.perms}</code></li>
+      <li>Zero-server option: run it as a GitHub Action instead — see <code>.github/workflows/bots-*.yml</code></li>
+    </ul>`;
   modalContent.innerHTML = `
     <h2>${bot.emoji} ${bot.name}</h2>
     <p class="desc">${bot.desc}</p>
@@ -421,12 +440,7 @@ function openModal(bot) {
     <h4>Build &amp; run</h4>
     <div class="codewrap"><button class="mcopy">copy</button><pre>${buildCmd}</pre></div>
 
-    <h4>Webhook setup</h4>
-    <ul>
-      <li>URL: <code>http://your-server:${bot.port}/webhook</code> · content type <code>application/json</code></li>
-      <li>Events: <b>${bot.events}</b></li>
-      <li>Permissions: <code>${bot.perms}</code></li>
-    </ul>
+    ${setupSection}
 
     <h4>Notes</h4>
     <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
