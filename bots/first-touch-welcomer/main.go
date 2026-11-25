@@ -75,19 +75,37 @@ func main() {
 		if association == "OWNER" || association == "MEMBER" || association == "COLLABORATOR" {
 			return
 		}
-		first, err := isFirstTimer(client, ev.Repo.FullName, login)
-		if err != nil {
-			log.Printf("search: %v", err)
-			return
+		// GitHub computes first-time contribution itself (#24):
+		// FIRST_TIMER means no prior activity at all, FIRST_TIME_CONTRIBUTOR
+		// means first merged/accepted contribution. Trusting it avoids the
+		// search-API race where indexing lag made repeat contributors look new.
+		first := association == "FIRST_TIMER" || association == "FIRST_TIME_CONTRIBUTOR"
+		if association == "NONE" {
+			// NONE means no special relationship — fall back to the search
+			// count for repos where association isn't populated as expected
+			var err error
+			first, err = isFirstTimer(client, ev.Repo.FullName, login)
+			if err != nil {
+				log.Printf("search: %v", err)
+				return
+			}
 		}
 		if !first {
 			return
 		}
 
-		body := fmt.Sprintf(
-			"Welcome, @%s! 🎉 Thanks for opening your first %s here. "+
-				"A maintainer will take a look soon — meanwhile make sure the details above are complete.",
-			login, kind)
+		var body string
+		if kind == "pull request" {
+			body = fmt.Sprintf(
+				"Welcome, @%s! 🎉 Thanks for your first pull request here. "+
+					"CI and reviewers will take a look — keep an eye on the checks below.",
+				login)
+		} else {
+			body = fmt.Sprintf(
+				"Welcome, @%s! 🎉 Thanks for opening your first %s here. "+
+					"A maintainer will take a look soon — meanwhile make sure the details above are complete.",
+				login, kind)
+		}
 		if err := client.Comment(ev.Repo.FullName, number, body); err != nil {
 			log.Printf("comment: %v", err)
 			return
