@@ -42,7 +42,7 @@ jobs:
             name=$(basename "$bot")
             port=$(grep -oP 'LoadConfig\(".*?",\s*"\K[0-9]+' "$bot/main.go" | head -1)
             [ -z "$port" ] && continue
-            GITHUB_TOKEN=dummy REPO=dummy/dummy PORT="$port" timeout 6 "/tmp/$name" &
+            GITHUB_TOKEN=dummy REPO=dummy/dummy ALLOW_UNSIGNED_WEBHOOKS=true PORT="$port" timeout 6 "/tmp/$name" &
             pid=$!
             ok=""
             for i in 1 2 3 4 5; do

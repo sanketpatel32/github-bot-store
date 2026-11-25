@@ -62,8 +62,29 @@ func VerifySignature(secret string, body []byte, sigHeader string) bool {
 // (e.g. "pull_request") and the raw JSON payload.
 type WebhookHandler func(event string, payload []byte)
 
+// ServeHealth runs only the health endpoint — for cron-style bots that
+// don't consume webhooks, so there's nothing to sign.
+func ServeHealth(cfg Config, name string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintln(w, "ok")
+	})
+	log.Printf("[%s] health-only server listening on :%s", name, cfg.Port)
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+}
+
 // Serve starts the bot's HTTP server: POST /webhook plus GET /healthz.
+// A nonempty WEBHOOK_SECRET is required in production — unsigned webhooks
+// mean anyone who finds your port can trigger bot actions. Set
+// ALLOW_UNSIGNED_WEBHOOKS=true for local testing only.
 func Serve(cfg Config, name string, handler WebhookHandler) {
+	if cfg.Secret == "" && os.Getenv("ALLOW_UNSIGNED_WEBHOOKS") != "true" {
+		log.Fatalf("[%s] WEBHOOK_SECRET is not set. Configure the same secret in "+
+			"GitHub webhook settings, or set ALLOW_UNSIGNED_WEBHOOKS=true for local testing only.", name)
+	}
+	if cfg.Secret == "" {
+		log.Printf("[%s] WARNING: accepting unsigned webhooks (ALLOW_UNSIGNED_WEBHOOKS) — do not expose this port", name)
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w, "ok")

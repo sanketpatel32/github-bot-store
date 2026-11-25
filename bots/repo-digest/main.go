@@ -42,7 +42,7 @@ func main() {
 		}
 	}()
 
-	ghbot.Serve(cfg, "repo-digest", func(string, []byte) {})
+	ghbot.ServeHealth(cfg, "repo-digest")
 }
 
 func runDigest(client *ghbot.Client, repo string) {

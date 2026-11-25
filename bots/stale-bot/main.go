@@ -174,5 +174,5 @@ func main() {
 	}()
 
 	// no webhooks needed — just the health endpoint
-	ghbot.Serve(cfg, "stale-bot", func(string, []byte) {})
+	ghbot.ServeHealth(cfg, "stale-bot")
 }
