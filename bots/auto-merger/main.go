@@ -78,21 +78,36 @@ func (p *prInfo) automergeable() bool {
 // skipped and neutral conclusions pass. A sha with no checks at all counts
 // as green (repos without CI).
 func checksGreen(client *ghbot.Client, repo, sha string) bool {
-	// 1. check runs
-	runsBody, err := client.Do("GET",
-		fmt.Sprintf("/repos/%s/commits/%s/check-runs?per_page=100", repo, sha), nil)
-	if err != nil {
-		log.Printf("check-runs fetch: %v", err)
-		return false
-	}
-	var runs struct {
+	// 1. check runs — paginated: the endpoint caps at 100 per page and a sha
+	// with more runs must still have ALL of them evaluated (#106)
+	type runList struct {
 		TotalCount int `json:"total_count"`
 		CheckRuns  []struct {
 			Status     string `json:"status"`
 			Conclusion string `json:"conclusion"`
 		} `json:"check_runs"`
 	}
-	if json.Unmarshal(runsBody, &runs) != nil {
+	var runs runList
+	for page := 1; ; page++ {
+		runsBody, err := client.Do("GET",
+			fmt.Sprintf("/repos/%s/commits/%s/check-runs?per_page=100&page=%d", repo, sha, page), nil)
+		if err != nil {
+			log.Printf("check-runs fetch: %v", err)
+			return false
+		}
+		var chunk runList
+		if json.Unmarshal(runsBody, &chunk) != nil {
+			return false
+		}
+		runs.TotalCount = chunk.TotalCount
+		runs.CheckRuns = append(runs.CheckRuns, chunk.CheckRuns...)
+		if len(runs.CheckRuns) >= chunk.TotalCount || len(chunk.CheckRuns) == 0 {
+			break
+		}
+	}
+	if len(runs.CheckRuns) < runs.TotalCount {
+		log.Printf("warning: only saw %d of %d check runs for %.7s — refusing to merge blind",
+			len(runs.CheckRuns), runs.TotalCount, sha)
 		return false
 	}
 	for _, r := range runs.CheckRuns {
