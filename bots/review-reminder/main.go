@@ -107,7 +107,6 @@ func sweep(client *ghbot.Client, repo string, waitHours int) {
 	}
 }
 
-
 func main() {
 	cfg := ghbot.LoadConfig("review-reminder", "8117")
 	if ghbot.HandleCLIArgs("review-reminder", cfg) {

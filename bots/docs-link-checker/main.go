@@ -177,7 +177,6 @@ func sweep(gh *ghbot.Client, repo, branch string) {
 	log.Printf("scan complete: %d broken links", len(results))
 }
 
-
 func main() {
 	cfg := ghbot.LoadConfig("docs-link-checker", "8125")
 	if ghbot.HandleCLIArgs("docs-link-checker", cfg) {

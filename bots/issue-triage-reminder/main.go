@@ -70,7 +70,6 @@ func sweep(client *ghbot.Client, repo string, graceHours int) {
 	log.Printf("triage sweep complete")
 }
 
-
 func main() {
 	cfg := ghbot.LoadConfig("issue-triage-reminder", "8118")
 	if ghbot.HandleCLIArgs("issue-triage-reminder", cfg) {
