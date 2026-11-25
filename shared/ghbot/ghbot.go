@@ -479,6 +479,25 @@ func RunAction(name string, handler WebhookHandler) bool {
 	return true
 }
 
+// apiFailures counts API calls that failed after all retries — the spool
+// uses it to decide whether a handler's work actually landed (#132)
+var apiFailures struct {
+	sync.Mutex
+	n int
+}
+
+func recordAPIFailure() {
+	apiFailures.Lock()
+	apiFailures.n++
+	apiFailures.Unlock()
+}
+
+func apiFailureCount() int {
+	apiFailures.Lock()
+	defer apiFailures.Unlock()
+	return apiFailures.n
+}
+
 // ---- durable webhook inbox (#69) ----
 
 // When SPOOL_DIR is set, every accepted delivery is written to disk before
@@ -488,6 +507,7 @@ type spooledEvent struct {
 	Event    string `json:"event"`
 	Delivery string `json:"delivery"`
 	Payload  []byte `json:"payload"`
+	Attempts int    `json:"attempts"`
 }
 
 func spoolPath(dir, delivery string) string {
@@ -500,11 +520,38 @@ func spoolPath(dir, delivery string) string {
 }
 
 func writeSpool(dir, event, delivery string, payload []byte) error {
-	data, err := json.Marshal(spooledEvent{event, delivery, payload})
+	data, err := json.Marshal(spooledEvent{Event: event, Delivery: delivery, Payload: payload})
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(spoolPath(dir, delivery), data, 0o600)
+}
+
+const maxSpoolAttempts = 3
+
+// keepForReplay increments the delivery's attempt counter in place; past
+// the cap the event is dropped with an error rather than retried forever.
+func keepForReplay(dir, delivery, name string) {
+	p := spoolPath(dir, delivery)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return
+	}
+	var se spooledEvent
+	if json.Unmarshal(data, &se) != nil {
+		return
+	}
+	se.Attempts++
+	if se.Attempts > maxSpoolAttempts {
+		log.Printf("[%s] delivery %s failed %d times — dropping (manual replay needed)", name, delivery, se.Attempts)
+		os.Remove(p)
+		return
+	}
+	if out, err := json.Marshal(se); err == nil {
+		os.WriteFile(p, out, 0o600)
+	}
+	log.Printf("[%s] delivery %s kept for replay (attempt %d/%d) — API failures during handling",
+		name, delivery, se.Attempts, maxSpoolAttempts)
 }
 
 // replaySpool re-processes any deliveries left over from a crash.
@@ -526,8 +573,13 @@ func replaySpool(dir, name string, handler WebhookHandler) {
 			continue
 		}
 		log.Printf("[%s] replaying spooled delivery %s", name, se.Delivery)
+		failuresBefore := apiFailureCount()
 		handler(se.Event, se.Payload)
-		os.Remove(dir + "/" + e.Name())
+		if apiFailureCount() > failuresBefore {
+			keepForReplay(dir, se.Delivery, name)
+		} else {
+			os.Remove(dir + "/" + e.Name())
+		}
 	}
 }
 
@@ -668,9 +720,18 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 					log.Printf("[%s] panic handling %s: %v — delivery stays in spool for replay", name, event, rec)
 				}
 			}()
+			failuresBefore := apiFailureCount()
 			handler(event, body)
 			if spoolDir != "" {
-				os.Remove(spoolPath(spoolDir, deliveryID))
+				// if API calls failed during handling, the bot's actions may
+				// not have landed — deleting the only copy of the delivery
+				// would silently drop work (#132). Keep it for replay, but
+				// bounded: permanent failures must not loop forever.
+				if apiFailureCount() > failuresBefore {
+					keepForReplay(spoolDir, deliveryID, name)
+				} else {
+					os.Remove(spoolPath(spoolDir, deliveryID))
+				}
 			}
 		}
 		if !dispatch(job) {
@@ -886,6 +947,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		resp, err = c.hc.Do(req)
 		if err != nil {
 			if attempt == 3 || !isRead {
+				recordAPIFailure()
 				return nil, err
 			}
 			time.Sleep(jitterBackoff(attempt))
@@ -912,6 +974,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
+		recordAPIFailure()
 		return body, &APIError{Method: method, Path: path, Status: resp.StatusCode, Body: string(body)}
 	}
 	return body, nil
