@@ -35,40 +35,51 @@ type issueEvent struct {
 	} `json:"pull_request"`
 	Repo struct {
 		FullName string `json:"full_name"`
+		Owner    struct {
+			Login string `json:"login"`
+			Type  string `json:"type"`
+		} `json:"owner"`
 	} `json:"repository"`
 }
 
 // findProject locates the project v2 by owner+number and returns its ID and
-// the Status field with options.
-func findProject(client *ghbot.Client, owner string, number int) (projectID string, statusFieldID string, options map[string]string, err error) {
-	query := `query($owner:String!, $number:Int!) {
-  user(login:$owner) { projectV2(number:$number) { id } }
-  organization(login:$owner) { projectV2(number:$number) { id } }
-}`
-	data, err := client.GraphQL(query, map[string]any{"owner": owner, "number": number})
-	if err != nil {
-		return "", "", nil, err
+// the Status field with options. A project lives under either a user or an
+// organization, and GitHub answers the wrong owner type with a NOT_FOUND
+// error instead of an empty result — so the two scopes can't share one
+// query. preferOrg picks which is tried first.
+func findProject(client *ghbot.Client, owner string, number int, preferOrg bool) (projectID string, statusFieldID string, options map[string]string, err error) {
+	scopes := []string{"user", "organization"}
+	if preferOrg {
+		scopes = []string{"organization", "user"}
 	}
-	var result struct {
-		User struct {
-			Project struct {
+	var lookupErr error
+	for _, scope := range scopes {
+		query := fmt.Sprintf(`query($owner:String!, $number:Int!) {
+  %s(login:$owner) { projectV2(number:$number) { id } }
+}`, scope)
+		data, err := client.GraphQL(query, map[string]any{"owner": owner, "number": number})
+		if err != nil {
+			if lookupErr == nil {
+				lookupErr = err
+			}
+			continue
+		}
+		var result map[string]struct {
+			ProjectV2 struct {
 				ID string `json:"id"`
 			} `json:"projectV2"`
-		} `json:"user"`
-		Organization struct {
-			Project struct {
-				ID string `json:"id"`
-			} `json:"projectV2"`
-		} `json:"organization"`
-	}
-	if json.Unmarshal(data, &result) != nil {
-		return "", "", nil, fmt.Errorf("parse project lookup")
-	}
-	projectID = result.User.Project.ID
-	if projectID == "" {
-		projectID = result.Organization.Project.ID
+		}
+		if json.Unmarshal(data, &result) != nil {
+			return "", "", nil, fmt.Errorf("parse project lookup")
+		}
+		if projectID = result[scope].ProjectV2.ID; projectID != "" {
+			break
+		}
 	}
 	if projectID == "" {
+		if lookupErr != nil {
+			return "", "", nil, lookupErr
+		}
 		return "", "", nil, fmt.Errorf("project %d not found for %s", number, owner)
 	}
 
@@ -206,7 +217,10 @@ func main() {
 			return
 		}
 
-		projectID, statusFieldID, options, err := findProject(client, owner, projectNum)
+		// the project usually lives on the repo's owner account — try that
+		// scope first so the common case costs one query and no NOT_FOUND
+		preferOrg := ev.Repo.Owner.Type == "Organization" || !strings.EqualFold(ev.Repo.Owner.Login, owner)
+		projectID, statusFieldID, options, err := findProject(client, owner, projectNum, preferOrg)
 		if err != nil {
 			log.Printf("project lookup: %v", err)
 			return
