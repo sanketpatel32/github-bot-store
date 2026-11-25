@@ -54,9 +54,24 @@ spec:
       {{- if $.Values.spool.enabled }}
       volumes:
         - name: spool
-          emptyDir: {}   # use a PVC in production if durable inbox matters across reschedules
+          persistentVolumeClaim:
+            claimName: {{ .name }}-spool
       {{- end }}
 ---
+{{- if $.Values.spool.enabled }}
+# a durable inbox that evaporates on pod replacement is not durable — the
+# spool gets a real persistent volume, not emptyDir (#116)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .name }}-spool
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: {{ $.Values.spool.size }}
+---
+{{- end }}
 apiVersion: v1
 kind: Service
 metadata:
