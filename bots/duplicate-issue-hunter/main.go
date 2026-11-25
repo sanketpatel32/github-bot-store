@@ -32,7 +32,7 @@ var stopWords = map[string]bool{
 	"i": true, "it": true, "this": true, "that": true, "not": true, "cant": true, "doesnt": true,
 }
 
-var wordRe = regexp.MustCompile(`[a-z0-9]+`)
+var wordRe = regexp.MustCompile(`[\p{L}\p{N}]+`)
 
 func keywords(title string) []string {
 	words := wordRe.FindAllString(strings.ToLower(title), -1)
@@ -101,17 +101,9 @@ func main() {
 			if item.Number == ev.Issue.Number {
 				continue
 			}
-			overlap := 0
-			itemWords := keywords(item.Title)
-			for _, w := range words {
-				for _, iw := range itemWords {
-					if w == iw {
-						overlap++
-					}
-				}
-			}
-			if overlap >= 2 {
-				matches = append(matches, match{item.Number, overlap, item.Title, item.State})
+			score := similarity(words, keywords(item.Title))
+			if score >= 40 { // percent-scale threshold
+				matches = append(matches, match{item.Number, score, item.Title, item.State})
 			}
 		}
 		if len(matches) == 0 {
@@ -134,6 +126,46 @@ func main() {
 		}
 		log.Printf("flagged %d possible duplicates on #%d", len(matches), ev.Issue.Number)
 	})
+}
+
+// similarity scores two keyword sets on a 0-100 scale: overlap weighted by
+// the smaller set, with a bonus for contiguous word-order matches — "crash
+// on startup" and "startup crash" share words but the first pair is a
+// stronger duplicate signal (#25).
+func similarity(a, b []string) int {
+	if len(a) == 0 || len(b) == 0 {
+		return 0
+	}
+	setB := map[string]bool{}
+	for _, w := range b {
+		setB[w] = true
+	}
+	overlap := 0
+	for _, w := range a {
+		if setB[w] {
+			overlap++
+		}
+	}
+	smaller := len(a)
+	if len(b) < smaller {
+		smaller = len(b)
+	}
+	score := overlap * 100 / (smaller + 1)
+	// order bonus: shared adjacent pairs
+	pairsA := map[string]bool{}
+	for i := 0; i+1 < len(a); i++ {
+		pairsA[a[i]+" "+a[i+1]] = true
+	}
+	for i := 0; i+1 < len(b); i++ {
+		if pairsA[b[i]+" "+b[i+1]] {
+			score += 15
+			break
+		}
+	}
+	if score > 100 {
+		score = 100
+	}
+	return score
 }
 
 func min(a, b int) int {
