@@ -145,7 +145,7 @@ func main() {
 	if v := os.Getenv("GRACE_DAYS"); v != "" {
 		fmt.Sscanf(v, "%d", &grace)
 	}
-	ghbot.ServeCron(cfg, "discussion-triage-bot", sweepInterval(), func() {
+	ghbot.ServeCron(cfg, "discussion-triage-bot", ghbot.SweepInterval(24), func() {
 		sweep(client, repo, grace)
 	})
 }

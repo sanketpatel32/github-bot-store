@@ -977,3 +977,22 @@ func (c *Client) EnsureLabel(repo, name, color, description string) {
 		log.Printf("ensure label %s: %v (usually fine — it exists)", name, err)
 	}
 }
+
+// SweepInterval reads SWEEP_INTERVAL_HOURS (default 24) as a duration,
+// clamping to [1, 720] hours. Zero or negative values previously crashed
+// scheduled bots because time.NewTicker panics on non-positive intervals.
+func SweepInterval(defaultHours int) time.Duration {
+	h := defaultHours
+	if v := os.Getenv("SWEEP_INTERVAL_HOURS"); v != "" {
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+			h = n
+		}
+	}
+	if h < 1 {
+		h = 1
+	}
+	if h > 720 {
+		h = 720
+	}
+	return time.Duration(h) * time.Hour
+}
