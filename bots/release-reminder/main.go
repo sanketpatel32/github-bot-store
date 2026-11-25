@@ -16,32 +16,54 @@ import (
 const marker = "<!-- release-reminder -->"
 
 func sweep(client *ghbot.Client, repo string, threshold int) {
-	// latest release (or tag) date
-	var since time.Time
+	// accurate unreleased counting: compare the release TAG against the
+	// default branch. Counting commits by published_at misses work that
+	// landed before publish time but never made it into the release, and
+	// offers no help at all before the first release (#143).
+	var count, days int
 	body, err := client.Do("GET", fmt.Sprintf("/repos/%s/releases/latest", repo), nil)
 	if err == nil {
 		var rel struct {
+			TagName     string    `json:"tag_name"`
 			PublishedAt time.Time `json:"published_at"`
 		}
-		if json.Unmarshal(body, &rel) == nil {
-			since = rel.PublishedAt
+		if json.Unmarshal(body, &rel) == nil && rel.TagName != "" {
+			cmp, err := client.Do("GET", fmt.Sprintf("/repos/%s/compare/%s...HEAD", repo, rel.TagName), nil)
+			if err == nil {
+				var c struct {
+					AheadBy int `json:"ahead_by"`
+				}
+				if json.Unmarshal(cmp, &c) == nil {
+					count = c.AheadBy
+				}
+			}
+			days = int(time.Since(rel.PublishedAt).Hours() / 24)
 		}
 	}
-	if since.IsZero() {
-		// no releases at all — fall back to first commit or just report total
-		log.Printf("no releases found — nothing to compare against yet")
-		return
+	if count == 0 && days == 0 {
+		// no releases at all — every commit is unreleased; remind the
+		// maintainer their FIRST release is due too (#143)
+		commits, err := client.GetAll(fmt.Sprintf("/repos/%s/commits", repo))
+		if err != nil {
+			log.Printf("commits: %v", err)
+			return
+		}
+		count = len(commits)
+		// age measured from the repo's first commit
+		if len(commits) > 0 {
+			var first struct {
+				Commit struct {
+					Committer struct {
+						Date time.Time `json:"date"`
+					} `json:"committer"`
+				} `json:"commit"`
+			}
+			if json.Unmarshal(commits[len(commits)-1], &first) == nil {
+				days = int(time.Since(first.Commit.Committer.Date).Hours() / 24)
+			}
+		}
 	}
-
-	commits, err := client.GetAll(fmt.Sprintf("/repos/%s/commits?since=%s",
-		repo, since.UTC().Format(time.RFC3339)))
-	if err != nil {
-		log.Printf("commits: %v", err)
-		return
-	}
-	count := len(commits)
-	days := int(time.Since(since).Hours() / 24)
-	log.Printf("%d commits since last release (%d days ago)", count, days)
+	log.Printf("%d unreleased commits (%d days)", count, days)
 
 	title := fmt.Sprintf("Release reminder: %d unreleased commits (%d days)", count, days)
 	bodyText := fmt.Sprintf(`%s
