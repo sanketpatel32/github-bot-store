@@ -642,6 +642,13 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		}
 		reader = bytes.NewReader(data)
 	}
+	// global dry-run (#37): with DRY_RUN=true, mutating calls are logged
+	// and skipped — every bot gains a safe preview mode for free. Reads
+	// still execute so bots can compute what they would have done.
+	if os.Getenv("DRY_RUN") == "true" && method != "GET" && method != "HEAD" {
+		log.Printf("dry-run: would %s %s", method, path)
+		return []byte(`{}`), nil
+	}
 	c.recordAPI()
 	req, err := http.NewRequest(method, "https://api.github.com"+path, reader)
 	if err != nil {
