@@ -1,12 +1,12 @@
 package ghbot
 
 import (
-	"sync"
-	"time"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"sync"
 	"testing"
+	"time"
 )
 
 func sign(secret string, body []byte) string {
