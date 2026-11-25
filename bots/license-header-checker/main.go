@@ -93,12 +93,35 @@ func main() {
 				continue
 			}
 			// only newly added source files need headers
-			if f.Status != "added" || !sourceExt(f.Filename) || f.Patch == "" {
+			if f.Status != "added" || !sourceExt(f.Filename) {
 				continue
 			}
-			// the patch contains only the first chunk of the file for new
-			// files — good enough since headers live at the top
-			if !strings.Contains(strings.ToLower(f.Patch), needle) {
+			if f.Patch == "" {
+				// no patch means NOT INSPECTED — passing uninspected content
+				// defeats the check's purpose; fail closed and say so (#135)
+				missing = append(missing, f.Filename+" (content unavailable — could not verify)")
+				continue
+			}
+			// a header lives at the TOP of the file — accepting the needle
+			// anywhere in the diff passes files that merely mention the
+			// license in a comment halfway down (#135)
+			var added []string
+			for _, line := range strings.Split(f.Patch, "\n") {
+				if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+					added = append(added, strings.ToLower(line[1:]))
+				}
+				if len(added) >= 15 {
+					break
+				}
+			}
+			found := false
+			for _, l := range added {
+				if strings.Contains(l, needle) {
+					found = true
+					break
+				}
+			}
+			if !found {
 				missing = append(missing, f.Filename)
 			}
 		}
