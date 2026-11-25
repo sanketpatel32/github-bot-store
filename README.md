@@ -29,6 +29,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [changelog-checker](bots/changelog-checker) | Commit status enforcing changelog updates | webhook |
 | [license-header-checker](bots/license-header-checker) | Enforces license headers on new files | webhook |
 | [pr-path-labeler](bots/pr-path-labeler) | Labels PRs by touched directories | webhook |
+| [contributor-milestones](bots/contributor-milestones) | Celebrates merged-PR milestones | webhook |
 
 ## Automations
 

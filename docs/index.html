@@ -404,6 +404,10 @@ const BOTS = [
     desc: "Labels PRs by which directories they touch — area/frontend, area/backend — using your repo's existing labels.",
     events: "Pull requests", perms: "pulls: read, issues: write",
     notes: ["Optional path-labels.json for explicit prefix→label mapping", "Never invents labels — only applies ones that already exist"] },
+  { name: "contributor-milestones", emoji: "🏆", type: "webhook", port: 8122, accent: "#f85149",
+    desc: "Celebrates contributors — welcome comment on first merged PR, shout-outs at 5/10/25/50/100 merges.",
+    events: "Pull requests (closed)", perms: "pulls: read, issues: write",
+    notes: ["Recognition drives repeat contribution", "Bot accounts are ignored"] },
 ];
 
 const grid = document.getElementById("grid");
