@@ -1,0 +1,44 @@
+name: release
+
+# Builds every bot for linux/amd64 + linux/arm64 and attaches the binaries
+# to a GitHub release whenever a v* tag is pushed — no build step needed on
+# your tiny server, just download the tarball.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: cross-compile all bots
+        run: |
+          set -e
+          mkdir -p dist
+          for bot in bots/*/; do
+            name=$(basename "$bot")
+            for arch in amd64 arm64; do
+              out="dist/${name}-linux-${arch}"
+              echo "building $out"
+              CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -ldflags="-s -w" -o "$out" "./$bot"
+              tar -czf "${out}.tar.gz" -C dist "$(basename $out)"
+            done
+          done
+          ls -la dist/
+
+      - name: attach binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tar.gz
+          generate_release_notes: true
