@@ -26,6 +26,9 @@ jobs:
       - name: vet
         run: go vet ./...
 
+      - name: unit tests with race detector
+        run: go test -race ./...
+
       - name: build all bots
         run: |
           set -e
