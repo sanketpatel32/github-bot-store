@@ -32,7 +32,7 @@ var todoRe = regexp.MustCompile(`(?m)^\+.*(?:TODO|FIXME)\b[:\s]?(.*)$`)
 
 func todoHash(file string, line string) string {
 	h := sha1.Sum([]byte(file + "|" + line))
-	return hex.EncodeToString(h)[:8]
+	return hex.EncodeToString(h[:])[:8]
 }
 
 func alreadyTracked(client *ghbot.Client, repo, hash string) bool {
