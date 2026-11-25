@@ -14,6 +14,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -127,9 +129,33 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	resp, err := c.hc.Do(req)
-	if err != nil {
-		return nil, err
+	var resp *http.Response
+	for attempt := 0; attempt < 4; attempt++ {
+		resp, err = c.hc.Do(req)
+		if err != nil {
+			if attempt == 3 {
+				return nil, err
+			}
+			time.Sleep(time.Duration(1<<attempt) * time.Second)
+			continue
+		}
+		// retry on server errors and secondary rate limits
+		if resp.StatusCode == 502 || resp.StatusCode == 503 ||
+			(resp.StatusCode == 429) || (resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0") {
+			wait := time.Duration(1<<attempt) * 2 * time.Second
+			if rs := resp.Header.Get("Retry-After"); rs != "" {
+				if secs, cerr := strconv.Atoi(rs); cerr == nil {
+					wait = time.Duration(secs) * time.Second
+				}
+			}
+			resp.Body.Close()
+			if attempt == 3 {
+				return nil, fmt.Errorf("github %s %s: %d after retries", method, path, resp.StatusCode)
+			}
+			time.Sleep(wait)
+			continue
+		}
+		break
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
@@ -137,6 +163,61 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		return body, fmt.Errorf("github %s %s: %d: %.200s", method, path, resp.StatusCode, body)
 	}
 	return body, nil
+}
+
+// GetAll follows Link-header pagination and returns concatenated JSON array items
+// for list endpoints. Pass a path without per_page; it appends per_page=100.
+func (c *Client) GetAll(path string) ([]json.RawMessage, error) {
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+	var all []json.RawMessage
+	next := path + sep + "per_page=100"
+	for next != "" {
+		req, err := http.NewRequest("GET", "https://api.github.com"+next, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("Accept", "application/vnd.github+json")
+		resp, err := c.hc.Do(req)
+		if err != nil {
+			return all, err
+		}
+		body, _ := io.ReadAll(resp.Body)
+		link := resp.Header.Get("Link")
+		resp.Body.Close()
+		if resp.StatusCode >= 300 {
+			return all, fmt.Errorf("github GET %s: %d", next, resp.StatusCode)
+		}
+		var page []json.RawMessage
+		if err := json.Unmarshal(body, &page); err != nil {
+			return all, err
+		}
+		all = append(all, page...)
+		next = nextLink(link)
+	}
+	return all, nil
+}
+
+// nextLink parses the Link header for rel="next" and returns the path+query portion.
+func nextLink(header string) string {
+	for _, part := range strings.Split(header, ",") {
+		if !strings.Contains(part, `rel="next"`) {
+			continue
+		}
+		start := strings.Index(part, "<")
+		end := strings.Index(part, ">")
+		if start == -1 || end == -1 {
+			return ""
+		}
+		u := part[start+1 : end]
+		if idx := strings.Index(u, "api.github.com"); idx != -1 {
+			return u[idx+len("api.github.com"):]
+		}
+	}
+	return ""
 }
 
 // Comment posts a comment on an issue or PR.
