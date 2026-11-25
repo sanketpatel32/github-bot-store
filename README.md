@@ -20,6 +20,14 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [auto-merger](bots/auto-merger) | Merges labeled PRs once checks go green |
 | [repo-digest](bots/repo-digest) | Weekly digest issue of repo activity |
 | [pr-template-checker](bots/pr-template-checker) | Nudges PRs missing template sections |
+| [release-drafter](bots/release-drafter) | Running draft release from merged PRs |
+| [keyword-issue-labeler](bots/keyword-issue-labeler) | Auto-labels issues by content keywords |
+| [ci-failure-commenter](bots/ci-failure-commenter) | Comments failing checks with log links |
+
+## Automations
+
+- **CI** (`.github/workflows/ci.yml`) — gofmt, vet, builds all 15 bots, and smoke-tests each binary's `/healthz` on every push
+- **Release** (`.github/workflows/release.yml`) — push a `v*` tag and every bot is cross-compiled for linux/amd64 + arm64 and attached to the release, so your server never needs Go installed
 
 ## Why Go?
 
