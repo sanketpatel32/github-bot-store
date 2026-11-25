@@ -38,6 +38,7 @@ jobs:
             done
           done
           (cd dist && sha256sum *.tar.gz > checksums.txt)
+          TAG="${GITHUB_REF_NAME}" bash tools/gen-formula.sh dist "$TAG"
           # SBOM (#81): stdlib-only means the software bill of materials is
           # just the Go toolchain version + module list — but emit it
           # properly so consumers can automate compliance checks.
