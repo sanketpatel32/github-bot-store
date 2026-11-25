@@ -53,3 +53,34 @@ func TestNextLink(t *testing.T) {
 		t.Error("header without next rel should yield empty")
 	}
 }
+
+func TestSeenDeliveryDedupes(t *testing.T) {
+	if seenDelivery("d-1") {
+		t.Error("first delivery should not be a duplicate")
+	}
+	if !seenDelivery("d-1") {
+		t.Error("second identical delivery must be flagged duplicate")
+	}
+	if seenDelivery("d-2") {
+		t.Error("distinct delivery should not be a duplicate")
+	}
+	if seenDelivery("") {
+		t.Error("empty id never dedupes")
+	}
+}
+
+func TestDispatchSaturation(t *testing.T) {
+	// fill the queue with blocking jobs; eventually dispatch must refuse
+	block := make(chan struct{})
+	refused := false
+	for i := 0; i < queueDepth+workerCount+4; i++ {
+		if !dispatch(func() { <-block }) {
+			refused = true
+			break
+		}
+	}
+	close(block)
+	if !refused {
+		t.Error("saturated queue must refuse instead of dropping silently")
+	}
+}

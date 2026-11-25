@@ -16,8 +16,67 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+// ---- bounded worker pool (#11) ----
+
+const workerCount = 8
+const queueDepth = 64
+
+var jobQueue = make(chan func(), queueDepth)
+var workersOnce sync.Once
+
+func startWorkers() {
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			for job := range jobQueue {
+				job()
+			}
+		}()
+	}
+}
+
+// dispatch queues a job; returns false when the queue is saturated.
+func dispatch(job func()) bool {
+	workersOnce.Do(startWorkers)
+	select {
+	case jobQueue <- job:
+		return true
+	default:
+		return false
+	}
+}
+
+// ---- delivery dedupe (#10) ----
+
+const dedupeRetention = 4096
+
+var dedupe = struct {
+	sync.Mutex
+	ids   map[string]bool
+	order []string
+}{ids: map[string]bool{}}
+
+// seenDelivery records a delivery ID; true if it was already seen.
+func seenDelivery(id string) bool {
+	if id == "" {
+		return false
+	}
+	dedupe.Lock()
+	defer dedupe.Unlock()
+	if dedupe.ids[id] {
+		return true
+	}
+	dedupe.ids[id] = true
+	dedupe.order = append(dedupe.order, id)
+	if len(dedupe.order) > dedupeRetention {
+		delete(dedupe.ids, dedupe.order[0])
+		dedupe.order = dedupe.order[1:]
+	}
+	return false
+}
 
 // newServer builds an http.Server with production timeouts — slow-client
 // and slowloris resistance out of the box.
@@ -125,14 +184,30 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			return
 		}
 		event := r.Header.Get("X-GitHub-Event")
-		go func() {
+		deliveryID := r.Header.Get("X-GitHub-Delivery")
+
+		// dedupe redeliveries — GitHub retries on timeouts and users click
+		// "redeliver"; without this every retry repeats the bot's actions
+		if seenDelivery(deliveryID) {
+			log.Printf("[%s] duplicate delivery %s — skipping", name, deliveryID)
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+
+		job := func() {
 			defer func() {
 				if rec := recover(); rec != nil {
 					log.Printf("[%s] panic handling %s: %v", name, event, rec)
 				}
 			}()
 			handler(event, body)
-		}()
+		}
+		if !dispatch(job) {
+			// workers saturated — 429 tells GitHub to retry later instead of
+			// dropping the event silently
+			http.Error(w, "busy — retry", http.StatusTooManyRequests)
+			return
+		}
 		w.WriteHeader(http.StatusAccepted)
 	})
 	log.Printf("[%s] listening on :%s", name, cfg.Port)
