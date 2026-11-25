@@ -68,9 +68,12 @@ func findDraft(client *ghbot.Client, repo string) (int64, string) {
 	return 0, ""
 }
 
-func insertEntry(body, heading, entry string) string {
-	if strings.Contains(body, entry) {
-		return body // idempotent — replays don't duplicate
+func insertEntry(body, heading, entry string, prNumber int) string {
+	// identity is the PR number, never the formatted text — titles are
+	// editable, so text-based dedupe re-inserts the same PR after a rename
+	// and title-based replacement can drop entries (#129)
+	if strings.Contains(body, fmt.Sprintf("#%d)", prNumber)) {
+		return body
 	}
 	header := "### " + heading
 	if idx := strings.Index(body, header); idx != -1 {
@@ -112,28 +115,36 @@ func main() {
 		entry := fmt.Sprintf("- %s (#%d) @%s", ev.PR.Title, ev.PR.Number, ev.PR.User.Login)
 		heading := groupOf(ev.PR.Title)
 
-		id, body := findDraft(client, repo)
-		if id == 0 {
-			// create the draft
-			newBody := "\n### " + heading + "\n" + entry + "\n"
-			_, err := client.Do("POST", fmt.Sprintf("/repos/%s/releases", repo), map[string]any{
-				"tag_name": "", "name": "Next release (draft)", "body": newBody, "draft": true,
-			})
-			if err != nil {
-				log.Printf("create draft: %v", err)
-				return
-			}
-			log.Printf("created draft release with #%d", ev.PR.Number)
-			return
-		}
-
-		updated := insertEntry(body, heading, entry)
-		_, err := client.Do("PATCH", fmt.Sprintf("/repos/%s/releases/%d", repo, id),
-			map[string]any{"body": updated})
-		if err != nil {
-			log.Printf("update draft: %v", err)
-			return
-		}
-		log.Printf("added #%d to draft under %s", ev.PR.Number, heading)
+		// read-modify-write on the draft must be serialized — two merged PRs
+		// arriving together otherwise race and one update discards the other (#129)
+		ghbot.WithResourceLock("release-draft:"+repo, func() {
+			updateDraft(client, repo, heading, entry, ev.PR.Number)
+		})
 	})
+}
+
+func updateDraft(client *ghbot.Client, repo, heading, entry string, prNumber int) {
+	id, body := findDraft(client, repo)
+	if id == 0 {
+		// create the draft
+		newBody := "\n### " + heading + "\n" + entry + "\n"
+		_, err := client.Do("POST", fmt.Sprintf("/repos/%s/releases", repo), map[string]any{
+			"tag_name": "", "name": "Next release (draft)", "body": newBody, "draft": true,
+		})
+		if err != nil {
+			log.Printf("create draft: %v", err)
+			return
+		}
+		log.Printf("created draft release with #%d", prNumber)
+		return
+	}
+
+	updated := insertEntry(body, heading, entry, prNumber)
+	_, err := client.Do("PATCH", fmt.Sprintf("/repos/%s/releases/%d", repo, id),
+		map[string]any{"body": updated})
+	if err != nil {
+		log.Printf("update draft: %v", err)
+		return
+	}
+	log.Printf("added #%d to draft under %s", prNumber, heading)
 }
