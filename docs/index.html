@@ -408,6 +408,10 @@ const BOTS = [
     desc: "Celebrates contributors — welcome comment on first merged PR, shout-outs at 5/10/25/50/100 merges.",
     events: "Pull requests (closed)", perms: "pulls: read, issues: write",
     notes: ["Recognition drives repeat contribution", "Bot accounts are ignored"] },
+  { name: "breaking-change-guard", emoji: "💔", type: "webhook", port: 8123, accent: "#f85149",
+    desc: "Blocks merges that declare breaking changes until a maintainer acknowledges with the breaking-change label.",
+    events: "Pull requests", perms: "statuses: write, pulls: read, issues: write",
+    notes: ["Detects feat!: titles and BREAKING CHANGE footers", "Re-checks on label changes so acknowledgment flips it green"] },
 ];
 
 const grid = document.getElementById("grid");
