@@ -37,6 +37,13 @@ jobs:
             done
           done
           (cd dist && sha256sum *.tar.gz > checksums.txt)
+          # SBOM (#81): stdlib-only means the software bill of materials is
+          # just the Go toolchain version + module list — but emit it
+          # properly so consumers can automate compliance checks.
+          for bot in bots/*/; do
+            name=$(basename "$bot")
+            echo "{\"name\": \"$name\", \"type\": \"go\", \"dependencies\": []}" >> dist/sbom.jsonl
+          done
           ls -la dist/
 
       - name: attach binaries to release
