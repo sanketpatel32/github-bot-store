@@ -93,27 +93,37 @@ func main() {
 			return
 		}
 
-		key := ev.CheckRun.Name
+		// key by repo+check+SHA: parallel PR activity must not overwrite one
+		// commit's failure with another commit's success before the rerun
+		// completes, and a shared instance must not blend repositories (#108)
+		repoKey := ev.Repo.FullName + "|" + ev.CheckRun.Name
+		key := repoKey + "|" + ev.CheckRun.HeadSHA
 		st.mu.Lock()
 		prev, seen := st.LastSeen[key]
-		isFlake := seen && prev.SHA == ev.CheckRun.HeadSHA &&
-			prev.Conclusion == "failure" && ev.CheckRun.Conclusion == "success"
+		isFlake := seen && prev.Conclusion == "failure" && ev.CheckRun.Conclusion == "success"
 		st.LastSeen[key] = lastSeen{
 			SHA:        ev.CheckRun.HeadSHA,
 			Conclusion: ev.CheckRun.Conclusion,
 			At:         time.Now(),
 		}
-		if isFlake {
-			st.Flakes[key]++
+		// bound the map: SHAs accumulate forever otherwise — drop entries
+		// older than a week; flakes on week-old runs are not actionable
+		for k, v := range st.LastSeen {
+			if time.Since(v.At) > 7*24*time.Hour {
+				delete(st.LastSeen, k)
+			}
 		}
-		count := st.Flakes[key]
+		if isFlake {
+			st.Flakes[repoKey]++
+		}
+		count := st.Flakes[repoKey]
 		st.save()
 		st.mu.Unlock()
 
 		if !isFlake {
 			return
 		}
-		log.Printf("flake detected: %s passed after failing on same SHA (total %d)", key, count)
+		log.Printf("flake detected: %s passed after failing on same SHA (total %d)", repoKey, count)
 
 		if count < threshold {
 			return
@@ -121,7 +131,7 @@ func main() {
 		// already have an open issue for this check?
 		search, err := client.Do("GET", fmt.Sprintf(
 			"/search/issues?q=repo:%s+type:issue+state:open+in:body+flaky:%s&per_page=1",
-			ev.Repo.FullName, key), nil)
+			ev.Repo.FullName, repoKey), nil)
 		if err == nil {
 			var result struct {
 				Items []struct{} `json:"items"`
@@ -130,7 +140,7 @@ func main() {
 				return
 			}
 		}
-		title := fmt.Sprintf("Flaky check: %s (%d flakes)", key, count)
+		title := fmt.Sprintf("Flaky check: %s (%d flakes)", ev.CheckRun.Name, count)
 		body := fmt.Sprintf(`%s
 The check **%s** has flaked **%d times** — failing then passing on the *same commit* with no code changes.
 
@@ -140,7 +150,7 @@ A test that passes on retry without code changes is unreliable signal.
 Consider: quarantining it, fixing the nondeterminism, or increasing timeouts.
 
 <!-- flaky:%s -->`,
-			marker, key, count, ev.CheckRun.DetailsURL, key)
+			marker, ev.CheckRun.Name, count, ev.CheckRun.DetailsURL, repoKey)
 		_, err = client.Do("POST", fmt.Sprintf("/repos/%s/issues", ev.Repo.FullName),
 			map[string]any{"title": title, "body": body, "labels": []string{"flaky-test"}})
 		if err != nil {
@@ -151,6 +161,6 @@ Consider: quarantining it, fixing the nondeterminism, or increasing timeouts.
 			}
 			return
 		}
-		log.Printf("opened flaky-test issue for %s", key)
+		log.Printf("opened flaky-test issue for %s", repoKey)
 	})
 }
