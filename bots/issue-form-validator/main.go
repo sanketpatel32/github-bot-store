@@ -28,11 +28,29 @@ type issueEvent struct {
 	} `json:"repository"`
 }
 
-// requiredSections parses comma-separated REQUIRED_SECTIONS env or defaults.
+// templateProfile describes a known issue form: a heading that identifies
+// the template and the sections that must carry real content.
+type templateProfile struct {
+	name      string
+	signature string   // heading substring identifying the form
+	required  []string // headings that must exist and be filled
+}
+
+// knownTemplates mirrors the forms in .github/ISSUE_TEMPLATE — a completely
+// filled form must always pass validation (#112).
+var knownTemplates = []templateProfile{
+	{"bug report", "what happened", []string{"what happened"}},
+	{"feature request", "summary", []string{"summary", "details"}},
+}
+
+// requiredSections parses comma-separated REQUIRED_SECTIONS env. When unset,
+// validation is template-aware: known forms are checked against their own
+// fields, and freeform issues (including API-created maintenance/roadmap
+// issues) pass — operators opt into freeform validation by setting the var.
 func requiredSections() []string {
 	raw := os.Getenv("REQUIRED_SECTIONS")
 	if raw == "" {
-		raw = "what happened,steps to reproduce,expected"
+		return nil
 	}
 	var out []string
 	for _, s := range strings.Split(raw, ",") {
@@ -64,24 +82,48 @@ func validateIssue(body string, required []string) []string {
 			sections[current] += line + "\n"
 		}
 	}
-	var problems []string
-	for _, want := range required {
+	check := func(want string) []string {
+		var out []string
 		found := false
 		for heading, content := range sections {
 			if strings.Contains(heading, want) {
 				found = true
 				text := strings.TrimSpace(content)
 				if len(text) < 5 || placeholderRe.MatchString(text) {
-					problems = append(problems, fmt.Sprintf("**%s** is present but empty or placeholder", want))
+					out = append(out, fmt.Sprintf("**%s** is present but empty or placeholder", want))
 				}
 				break
 			}
 		}
 		if !found {
-			problems = append(problems, fmt.Sprintf("**%s** section is missing", want))
+			out = append(out, fmt.Sprintf("**%s** section is missing", want))
+		}
+		return out
+	}
+
+	if len(required) > 0 {
+		// explicit operator configuration applies to every issue
+		var problems []string
+		for _, want := range required {
+			problems = append(problems, check(want)...)
+		}
+		return problems
+	}
+
+	// template-aware default: validate against the form actually used (#112)
+	for _, tmpl := range knownTemplates {
+		for heading := range sections {
+			if strings.Contains(heading, tmpl.signature) {
+				var problems []string
+				for _, want := range tmpl.required {
+					problems = append(problems, check(want)...)
+				}
+				return problems
+			}
 		}
 	}
-	return problems
+	// freeform issue — no form detected, nothing to validate against
+	return nil
 }
 
 func main() {
@@ -110,9 +152,11 @@ func main() {
 		client.EnsureLabel(ev.Repo.FullName, "invalid-issue", "f85149", "Issue doesn't follow the template")
 
 		if len(problems) == 0 {
-			// valid — remove label if present, resolve comment
+			// valid — remove the label AND resolve any earlier error comment;
+			// leaving the comment contradicting the label confused reporters (#112)
 			client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/invalid-issue",
 				ev.Repo.FullName, ev.Issue.Number), nil)
+			resolveComment(client, ev.Repo.FullName, ev.Issue.Number)
 			log.Printf("issue #%d: valid", ev.Issue.Number)
 			return
 		}
@@ -148,4 +192,26 @@ func upsert(client *ghbot.Client, repo string, number int, body string) {
 		}
 	}
 	client.Comment(repo, number, body)
+}
+
+// resolveComment marks the managed feedback comment resolved so an edited,
+// now-valid issue no longer displays stale error text (#112).
+func resolveComment(client *ghbot.Client, repo string, number int) {
+	comments, err := client.GetAll(fmt.Sprintf("/repos/%s/issues/%d/comments", repo, number))
+	if err != nil {
+		return
+	}
+	for _, raw := range comments {
+		var c struct {
+			ID   int    `json:"id"`
+			Body string `json:"body"`
+		}
+		if json.Unmarshal(raw, &c) != nil {
+			continue
+		}
+		if strings.Contains(c.Body, marker) && !strings.Contains(c.Body, "✅") {
+			client.Do("PATCH", fmt.Sprintf("/repos/%s/issues/comments/%d", repo, c.ID),
+				map[string]string{"body": marker + "\n✅ Template feedback resolved — thanks for updating the issue!"})
+		}
+	}
 }
