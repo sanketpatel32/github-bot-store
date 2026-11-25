@@ -1,5 +1,6 @@
 // repo-digest — opens a weekly digest issue summarizing repo activity:
-// merged PRs, new/closed issues, top contributors. Cron-style like stale-bot.
+// merged PRs (authoritative pull-request data), new/closed issues, top
+// contributors. Idempotent: one digest per ISO week, even across restarts.
 package main
 
 import (
@@ -8,73 +9,145 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/sanketpatel32/github-bot-store/shared/ghbot"
 )
 
-type item struct {
-	Number int                    `json:"number"`
-	Title  string                 `json:"title"`
-	State  string                 `json:"state"`
-	User   struct{ Login string } `json:"user"`
-	PR     *struct {
-		MergedAt *time.Time `json:"merged_at"`
-	} `json:"pull_request"`
+func envInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
+type issue struct {
+	Number    int        `json:"number"`
+	State     string     `json:"state"`
 	CreatedAt time.Time  `json:"created_at"`
 	ClosedAt  *time.Time `json:"closed_at"`
+	Labels    []struct {
+		Name string `json:"name"`
+	} `json:"labels"`
+	PullRequest *struct{} `json:"pull_request"`
 }
 
-func main() {
-	cfg := ghbot.LoadConfig("repo-digest", "8111")
-	client := ghbot.NewClient(cfg.Token)
-
-	repo := os.Getenv("REPO")
-	if repo == "" {
-		log.Fatal("REPO (owner/name) env var is required")
-	}
-
-	go func() {
-		for {
-			runDigest(client, repo)
-			time.Sleep(7 * 24 * time.Hour)
+func hasLabel(i issue, name string) bool {
+	for _, l := range i.Labels {
+		if l.Name == name {
+			return true
 		}
-	}()
-
-	ghbot.ServeHealth(cfg, "repo-digest")
+	}
+	return false
 }
 
-func runDigest(client *ghbot.Client, repo string) {
-	since := time.Now().Add(-7 * 24 * time.Hour)
-	rawItems, err := client.GetAll(fmt.Sprintf(
-		"/repos/%s/issues?state=all&since=%s&sort=updated",
-		repo, since.UTC().Format(time.RFC3339)))
+// isoWeekPeriod is the stable period identifier: e.g. "2026-W48".
+func isoWeekPeriod(t time.Time) string {
+	y, w := t.ISOWeek()
+	return fmt.Sprintf("%d-W%02d", y, w)
+}
+
+func lastDigestPeriod() string {
+	data, err := os.ReadFile("digest-state.json")
 	if err != nil {
-		log.Printf("digest fetch: %v", err)
-		return
+		return ""
 	}
-	var items []item
-	for _, raw := range rawItems {
-		var it item
-		if json.Unmarshal(raw, &it) == nil {
-			items = append(items, it)
+	var s struct {
+		Period string `json:"period"`
+	}
+	json.Unmarshal(data, &s)
+	return s.Period
+}
+
+func saveDigestPeriod(period string) {
+	data, _ := json.Marshal(map[string]string{"period": period})
+	os.WriteFile("digest-state.json", data, 0o600)
+}
+
+func runDigest(client *ghbot.Client, repo string) bool {
+	period := isoWeekPeriod(time.Now())
+
+	// idempotence 1: local state — don't repost after a restart
+	if lastDigestPeriod() == period {
+		log.Printf("digest for %s already posted (state)", period)
+		return true
+	}
+	// idempotence 2: discover an existing digest issue for this period —
+	// covers state loss (fresh container, wiped disk)
+	searchBody, err := client.Do("GET", fmt.Sprintf(
+		"/search/issues?q=repo:%s+in:title+%s+label:digest&per_page=1", repo, period), nil)
+	if err == nil {
+		var result struct {
+			TotalCount int `json:"total_count"`
+		}
+		if json.Unmarshal(searchBody, &result) == nil && result.TotalCount > 0 {
+			log.Printf("digest for %s already exists on GitHub", period)
+			saveDigestPeriod(period)
+			return true
 		}
 	}
 
-	var merged, newIssues, closedIssues []item
+	weekStart := time.Now().Add(-7 * 24 * time.Hour)
+
+	// --- merged PRs: authoritative pulls endpoint, not issue-list metadata.
+	// merged_at on the issue object is unreliable, so count by pulls whose
+	// merged_at falls inside the window; closed-unmerged PRs are excluded.
+	rawPulls, err := client.GetAll(fmt.Sprintf("/repos/%s/pulls?state=closed&sort=updated&direction=desc", repo))
+	if err != nil {
+		log.Printf("pulls fetch: %v", err)
+		return false
+	}
+	type mergedPR struct {
+		Number int
+		Title  string
+		Login  string
+	}
+	var merged []mergedPR
 	contributors := map[string]int{}
-	for _, it := range items {
-		if it.PR != nil && it.PR.MergedAt != nil && it.PR.MergedAt.After(since) {
-			merged = append(merged, it)
-			contributors[it.User.Login]++
-		} else if it.PR == nil {
-			if it.CreatedAt.After(since) {
-				newIssues = append(newIssues, it)
-			}
-			if it.ClosedAt != nil && it.ClosedAt.After(since) {
-				closedIssues = append(closedIssues, it)
-			}
+	for _, raw := range rawPulls {
+		var pr struct {
+			Number   int        `json:"number"`
+			Title    string     `json:"title"`
+			MergedAt *time.Time `json:"merged_at"`
+			User     struct {
+				Login string `json:"login"`
+			} `json:"user"`
+		}
+		if json.Unmarshal(raw, &pr) != nil {
+			continue
+		}
+		if pr.MergedAt != nil && pr.MergedAt.After(weekStart) {
+			merged = append(merged, mergedPR{pr.Number, pr.Title, pr.User.Login})
+			contributors[pr.User.Login]++
+		}
+	}
+
+	// --- issues: exclude PRs and exclude the bot's own digest issues
+	rawIssues, err := client.GetAll(fmt.Sprintf(
+		"/repos/%s/issues?state=all&since=%s&sort=updated",
+		repo, weekStart.UTC().Format(time.RFC3339)))
+	if err != nil {
+		log.Printf("issues fetch: %v", err)
+		return false
+	}
+	newIssues, closedIssues := 0, 0
+	for _, raw := range rawIssues {
+		var it issue
+		if json.Unmarshal(raw, &it) != nil {
+			continue
+		}
+		if it.PullRequest != nil || hasLabel(it, "digest") {
+			continue
+		}
+		if it.CreatedAt.After(weekStart) {
+			newIssues++
+		}
+		if it.ClosedAt != nil && it.ClosedAt.After(weekStart) {
+			closedIssues++
 		}
 	}
 
@@ -88,16 +161,16 @@ func runDigest(client *ghbot.Client, repo string) {
 	}
 	sort.Slice(ranked, func(i, j int) bool { return ranked[i].count > ranked[j].count })
 
-	var b strings.Builder
 	week := time.Now().Format("Jan 2, 2006")
-	b.WriteString(fmt.Sprintf("## Weekly digest — week of %s\n\n", week))
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("## Weekly digest — week of %s (%s)\n\n", week, period))
 	b.WriteString(fmt.Sprintf("**%d** PRs merged · **%d** issues opened · **%d** issues closed\n\n",
-		len(merged), len(newIssues), len(closedIssues)))
+		len(merged), newIssues, closedIssues))
 
 	if len(merged) > 0 {
 		b.WriteString("### Merged PRs\n")
 		for _, pr := range merged {
-			b.WriteString(fmt.Sprintf("- #%d %s (@%s)\n", pr.Number, pr.Title, pr.User.Login))
+			b.WriteString(fmt.Sprintf("- #%d %s (@%s)\n", pr.Number, pr.Title, pr.Login))
 		}
 		b.WriteString("\n")
 	}
@@ -114,11 +187,35 @@ func runDigest(client *ghbot.Client, repo string) {
 	b.WriteString("_Generated by repo-digest_")
 
 	_, err = client.Do("POST", fmt.Sprintf("/repos/%s/issues", repo),
-		map[string]any{"title": "📊 Weekly digest — " + week, "body": b.String(),
+		map[string]any{"title": fmt.Sprintf("📊 Weekly digest — %s (%s)", week, period), "body": b.String(),
 			"labels": []string{"digest"}})
 	if err != nil {
 		log.Printf("create digest: %v", err)
-		return
+		return false
 	}
-	log.Printf("posted weekly digest for %s", repo)
+	saveDigestPeriod(period)
+	log.Printf("posted digest for %s", period)
+	return true
+}
+
+func main() {
+	cfg := ghbot.LoadConfig("repo-digest", "8111")
+	client := ghbot.NewClient(cfg.Token)
+
+	repo := os.Getenv("REPO")
+	if repo == "" {
+		log.Fatal("REPO (owner/name) env var is required")
+	}
+	intervalHours := envInt("DIGEST_INTERVAL_HOURS", 24)
+
+	go func() {
+		for {
+			// run often (default daily) but only post once per ISO week —
+			// restarts and missed windows self-heal
+			runDigest(client, repo)
+			time.Sleep(time.Duration(intervalHours) * time.Hour)
+		}
+	}()
+
+	ghbot.ServeHealth(cfg, "repo-digest")
 }
