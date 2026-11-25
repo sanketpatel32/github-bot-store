@@ -71,11 +71,18 @@ func main() {
 			if json.Unmarshal(raw, &f) != nil {
 				continue
 			}
-			// explicit mapping wins
+			// explicit mapping wins — a file covered by a deliberate mapping
+			// must not ALSO collect the implicit area label for its directory,
+			// or maintainers cannot keep automation/ownership signals clean (#136)
+			mapped := false
 			for prefix, label := range mapping {
 				if strings.HasPrefix(f.Filename, prefix) {
 					topDirs[label] = true
+					mapped = true
 				}
+			}
+			if mapped {
+				continue
 			}
 			// fall back to top-level directory convention: area/<dir>
 			if idx := strings.Index(f.Filename, "/"); idx > 0 {
