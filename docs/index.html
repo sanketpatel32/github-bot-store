@@ -388,6 +388,10 @@ const BOTS = [
     desc: "Nudges requested reviewers when a PR waits 24h+ without review — one reminder each, no spam.",
     events: "none (scheduled)", perms: "pulls: read, issues: write",
     notes: ["REMIND_AFTER_HOURS configures the wait (default 24)", "Tracks reminders via managed comment markers"] },
+  { name: "issue-triage-reminder", emoji: "🧭", type: "cron", port: 8118, accent: "#39c5cf",
+    desc: "Flags issues that sit untriaged — no label, assignee, or milestone — with a needs-triage label that clears itself once triaged.",
+    events: "none (scheduled)", perms: "issues: write",
+    notes: ["GRACE_HOURS configures the grace period (default 24)", "Self-cleaning: label removed when a human triages"] },
 ];
 
 const grid = document.getElementById("grid");
