@@ -1,0 +1,32 @@
+# Which bots to deploy — each becomes a Deployment+Service.
+# Any bot name from the store works; they're all the same shape.
+bots:
+  - name: pr-size-labeler
+    port: 8101
+    type: webhook
+  - name: auto-merger
+    port: 8110
+    type: webhook
+  - name: stale-bot
+    port: 8103
+    type: cron
+    repo: owner/repo
+
+# secrets: create once with
+#   kubectl create secret generic ghbot \
+#     --from-literal=token=ghp_xxx --from-literal=webhook-secret=xxx
+secretName: ghbot
+
+image:
+  registry: ghcr.io/sanketpatel32
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  requests: { memory: "16Mi", cpu: "5m" }
+  limits: { memory: "64Mi", cpu: "50m" }
+
+# spool for durable inbox — enable per-bot persistence
+spool:
+  enabled: true
+  size: 100Mi

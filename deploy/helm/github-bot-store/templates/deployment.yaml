@@ -1,0 +1,66 @@
+{{- range .Values.bots }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels: { app: {{ .name }} }
+spec:
+  replicas: 1   # bots are singletons — leaderless scaling is not safe for mutations
+  selector:
+    matchLabels: { app: {{ .name }} }
+  template:
+    metadata:
+      labels: { app: {{ .name }} }
+    spec:
+      containers:
+        - name: bot
+          image: "{{ $.Values.image.registry }}/{{ .name }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .port }}
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ $.Values.secretName }}, key: token } }
+            - name: WEBHOOK_SECRET
+              valueFrom: { secretKeyRef: { name: {{ $.Values.secretName }}, key: webhook-secret } }
+            - name: PORT
+              value: "{{ .port }}"
+            - name: BIND_ADDR
+              value: "0.0.0.0"
+            {{- if eq .type "cron" }}
+            - name: REPO
+              value: "{{ .repo }}"
+            {{- end }}
+            {{- if $.Values.spool.enabled }}
+            - name: SPOOL_DIR
+              value: /spool
+            {{- end }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet: { path: /healthz, port: {{ .port }} }
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /healthz, port: {{ .port }} }
+            periodSeconds: 10
+          {{- if $.Values.spool.enabled }}
+          volumeMounts:
+            - { name: spool, mountPath: /spool }
+          {{- end }}
+      {{- if $.Values.spool.enabled }}
+      volumes:
+        - name: spool
+          emptyDir: {}   # use a PVC in production if durable inbox matters across reschedules
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+spec:
+  selector: { app: {{ .name }} }
+  ports:
+    - port: {{ .port }}
+      targetPort: {{ .port }}
+---
+{{- end }}
