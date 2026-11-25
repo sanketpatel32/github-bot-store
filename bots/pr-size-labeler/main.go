@@ -47,6 +47,14 @@ func tierBounds() []int {
 		log.Printf("SIZE_TIER_MAX needs exactly 4 comma-separated bounds — using defaults")
 		return []int{20, 100, 300, 800}
 	}
+	// bounds must strictly ascend — a typo like "100,20,300,800" silently
+	// makes tiers unreachable and mislabels every large PR (#133)
+	for i := 1; i < len(out); i++ {
+		if out[i] <= out[i-1] {
+			log.Printf("SIZE_TIER_MAX must strictly ascend (got %v) — using defaults", out)
+			return []int{20, 100, 300, 800}
+		}
+	}
 	return out
 }
 
@@ -78,7 +86,14 @@ func generatedPatterns() []string {
 
 func isGenerated(path string, patterns []string) bool {
 	for _, p := range patterns {
-		if strings.Contains(path, strings.TrimSpace(p)) {
+		p = strings.TrimSpace(p)
+		// empty patterns match EVERYTHING in strings.Contains — one trailing
+		// comma in GENERATED_PATTERNS would classify every file as generated
+		// and shrink big PRs to XS (#133)
+		if p == "" {
+			continue
+		}
+		if strings.Contains(path, p) {
 			return true
 		}
 	}

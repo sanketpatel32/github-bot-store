@@ -28,3 +28,12 @@ func TestIsGenerated(t *testing.T) {
 		}
 	}
 }
+
+func TestEmptyPatternNeverMatches(t *testing.T) {
+	if isGenerated("src/main.go", []string{"", "  "}) {
+		t.Error("empty patterns must never classify a file as generated")
+	}
+	if !isGenerated("x/min.pb.go", []string{".pb.go"}) {
+		t.Error("real pattern still matches")
+	}
+}
