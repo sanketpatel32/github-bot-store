@@ -1,0 +1,62 @@
+# Reusable composite action — run any bot from the store in YOUR repo
+# without copying code or installing Go:
+#
+#   - uses: sanketpatel32/github-bot-store@v0.1.0
+#     with:
+#       bot: stale-bot
+#       token: ${{ secrets.GITHUB_TOKEN }}
+#       env_config: |
+#         REPO=${{ github.repository }}
+#
+# Pinning to a tag is strongly recommended — releases are signed (cosign
+# keyless) and checksums verified below before anything executes.
+name: github-bot-store
+description: Run a tiny GitHub automation bot from the bot store
+inputs:
+  bot:
+    description: Bot name from the catalog (e.g. stale-bot)
+    required: true
+  token:
+    description: GitHub token — use secrets.GITHUB_TOKEN or a PAT
+    required: true
+  version:
+    description: Release tag to download
+    default: v0.1.0
+  env_config:
+    description: Newline-separated KEY=VALUE configuration for the bot
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Download + verify + run
+      shell: bash
+      env:
+        BOT: ${{ inputs.bot }}
+        VERSION: ${{ inputs.version }}
+        ENV_CONFIG: ${{ inputs.env_config }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64) arch=amd64 ;;
+          aarch64|arm64) arch=arm64 ;;
+          *) echo "unsupported arch $arch"; exit 1 ;;
+        esac
+        archive="$BOT-linux-$arch.tar.gz"
+        base="https://github.com/sanketpatel32/github-bot-store/releases/download/$VERSION"
+        tmp=$(mktemp -d)
+        cd "$tmp"
+        curl -fsSLO "$base/$archive"
+        curl -fsSLO "$base/checksums.txt"
+        # never execute unverified bytes — checksums gate the extraction
+        grep "$archive\$" checksums.txt | sha256sum -c -
+        tar xzf "$archive"
+        bin=$(ls | grep "$BOT-linux" | grep -v tar.gz | head -1)
+        chmod +x "$bin"
+        # bot configuration from the consumer's env_config input
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          export "$line"
+        done <<< "$ENV_CONFIG"
+        exec "./$bin"

@@ -709,8 +709,8 @@ volumes:
       ...(isCron ? ["          REPO: \${{ github.repository }}"] : []),
       ...bot.requiredEnv.filter(e => e !== "REPO").map(e => `          ${e}: change-me  # required`),
     ];
-    out = `# .github/workflows/${bot.name}.yml — zero servers needed
-# events and permissions come straight from the bot's manifest metadata
+    out = `# .github/workflows/${bot.name}.yml — zero servers, zero Go toolchain
+# uses the pinned reusable action — no code checkout needed (#124)
 name: ${bot.name}
 on:
 ${triggers}
@@ -720,12 +720,12 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.26" }
-      - run: go run ./bots/${bot.name}
-        env:
-${envLines.join("\n")}`;
+      - uses: sanketpatel32/github-bot-store@v0.1.0
+        with:
+          bot: ${bot.name}
+          token: \${{ secrets.GITHUB_TOKEN }}
+          env_config: |
+${isCron ? "            REPO=\${{ github.repository }}\n" : ""}${bot.requiredEnv.filter(e => e !== "REPO").map(e => `            ${e}=change-me\n`).join("")}`;
     if (bot.name === "project-board-sync") {
       out += "\n\n# NOTE: Projects v2 mutations need a classic PAT or GitHub App token —\n# secrets.GITHUB_TOKEN cannot manage projects. Store a PAT as GH_PAT and use it instead.";
     }
