@@ -213,6 +213,9 @@
 
   footer { border-top: 1px solid var(--border); padding: 36px 0 44px; text-align: center; color: var(--muted); font-size: .88rem; }
   footer a { text-decoration: none; }
+    .card:focus-visible, .fpill:focus-visible, .mcopy:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
   .hidden { display: none !important; }
   @media (max-width: 640px) {
     #search { width: 100%; }
@@ -407,13 +410,24 @@ function render() {
       </div>
       <p>${bot.desc}</p>
       <div class="meta"><span class="tag ${bot.type}">${bot.type}</span></div>`;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `${bot.name} — open details`);
     card.onclick = () => openModal(bot);
+    card.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openModal(bot);
+      }
+    };
     grid.appendChild(card);
   }
   emptyMsg.classList.toggle("hidden", shown > 0);
 }
 
 function openModal(bot) {
+  document.getElementById("modal").setAttribute("role", "dialog");
+  document.getElementById("modal").setAttribute("aria-modal", "true");
   const isCron = bot.type === "cron";
   const buildCmd = isCron
     ? `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... REPO=owner/repo\n./${bot.name}   # health endpoint on :${bot.port}`
@@ -449,6 +463,7 @@ function openModal(bot) {
     <ul><li><a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">Source &amp; full README →</a></li></ul>`;
   overlay.classList.add("open");
   document.body.style.overflow = "hidden";
+  document.getElementById("close").focus();
 
   modalContent.querySelector(".mcopy").onclick = (e) => {
     navigator.clipboard.writeText(buildCmd);
