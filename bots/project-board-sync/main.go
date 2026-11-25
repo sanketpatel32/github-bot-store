@@ -25,10 +25,13 @@ type issueEvent struct {
 		} `json:"assignee"`
 	} `json:"issue"`
 	PR *struct {
-		Number int    `json:"number"`
-		NodeID string `json:"node_id"`
-		State  string `json:"state"`
-		Merged bool   `json:"merged"`
+		Number   int    `json:"number"`
+		NodeID   string `json:"node_id"`
+		State    string `json:"state"`
+		Merged   bool   `json:"merged"`
+		Assignee *struct {
+			Login string `json:"login"`
+		} `json:"assignee"`
 	} `json:"pull_request"`
 	Repo struct {
 		FullName string `json:"full_name"`
@@ -189,6 +192,7 @@ func main() {
 		} else if ev.PR != nil {
 			nodeID, kind, state, number = ev.PR.NodeID, "PR", ev.PR.State, ev.PR.Number
 			merged = ev.PR.Merged
+			assigned = ev.PR.Assignee != nil // assigned PRs are started work too (#109)
 		} else {
 			return
 		}
@@ -197,7 +201,7 @@ func main() {
 		}
 
 		switch ev.Action {
-		case "opened", "reopened", "assigned", "closed":
+		case "opened", "reopened", "assigned", "unassigned", "closed":
 		default:
 			return
 		}
