@@ -944,19 +944,25 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 	// responses are retried for those (#12).
 	isRead := method == "GET" || method == "HEAD"
 	for attempt := 0; attempt < 4; attempt++ {
+		if attempt > 0 {
+			if rerr := rewindBody(req); rerr != nil {
+				recordAPIFailure()
+				return nil, rerr
+			}
+		}
 		resp, err = c.hc.Do(req)
 		if err != nil {
 			if attempt == 3 || !isRead {
 				recordAPIFailure()
 				return nil, err
 			}
-			time.Sleep(jitterBackoff(attempt))
+			time.Sleep(retryBackoff(attempt))
 			continue
 		}
 		// retry on server errors and secondary rate limits
 		if resp.StatusCode == 502 || resp.StatusCode == 503 ||
 			(resp.StatusCode == 429) || (resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0") {
-			wait := jitterBackoff(attempt)
+			wait := retryBackoff(attempt)
 			if rs := resp.Header.Get("Retry-After"); rs != "" {
 				if secs, cerr := strconv.Atoi(rs); cerr == nil {
 					wait = time.Duration(secs) * time.Second
@@ -964,6 +970,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 			}
 			resp.Body.Close()
 			if attempt == 3 {
+				recordAPIFailure()
 				return nil, fmt.Errorf("github %s %s: %d after retries", method, path, resp.StatusCode)
 			}
 			time.Sleep(wait)
@@ -982,9 +989,26 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 
 // jitterBackoff returns exponential backoff with jitter — without jitter,
 // retrying bots thundering-herd the API after an outage (#12).
+// retryBackoff is the per-attempt wait; a variable so tests can zero it.
+var retryBackoff = jitterBackoff
+
 func jitterBackoff(attempt int) time.Duration {
 	base := time.Duration(1<<attempt) * time.Second
 	return base + time.Duration(rand.Int63n(int64(base)))
+}
+
+// rewindBody restores req.Body from GetBody before a retry — the previous
+// attempt drained it, and net/http only rewinds on its own internal retries.
+func rewindBody(req *http.Request) error {
+	if req.GetBody == nil {
+		return nil
+	}
+	body, err := req.GetBody()
+	if err != nil {
+		return err
+	}
+	req.Body = body
+	return nil
 }
 
 // ---- GraphQL support (discussions, projects v2) ----
@@ -1023,17 +1047,24 @@ func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessag
 	isMutation := strings.HasPrefix(strings.TrimSpace(query), "mutation")
 	var resp *http.Response
 	for attempt := 0; attempt < 4; attempt++ {
+		if attempt > 0 {
+			if rerr := rewindBody(req); rerr != nil {
+				recordAPIFailure()
+				return nil, rerr
+			}
+		}
 		resp, err = c.hc.Do(req)
 		if err != nil {
 			if attempt == 3 || isMutation {
+				recordAPIFailure()
 				return nil, err
 			}
-			time.Sleep(jitterBackoff(attempt))
+			time.Sleep(retryBackoff(attempt))
 			continue
 		}
 		if resp.StatusCode == 502 || resp.StatusCode == 503 || resp.StatusCode == 429 ||
 			(resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0") {
-			wait := jitterBackoff(attempt)
+			wait := retryBackoff(attempt)
 			if rs := resp.Header.Get("Retry-After"); rs != "" {
 				if secs, cerr := strconv.Atoi(rs); cerr == nil {
 					wait = time.Duration(secs) * time.Second
@@ -1041,6 +1072,7 @@ func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessag
 			}
 			resp.Body.Close()
 			if attempt == 3 {
+				recordAPIFailure()
 				return nil, fmt.Errorf("graphql: %d after retries", resp.StatusCode)
 			}
 			time.Sleep(wait)
@@ -1051,11 +1083,13 @@ func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessag
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
+		recordAPIFailure()
 		return nil, &APIError{Method: "POST", Path: "/graphql", Status: resp.StatusCode, Body: string(body)}
 	}
 	var result struct {
 		Data   json.RawMessage `json:"data"`
 		Errors []struct {
+			Type    string `json:"type"`
 			Message string `json:"message"`
 		} `json:"errors"`
 	}
@@ -1063,6 +1097,11 @@ func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessag
 		return nil, err
 	}
 	if len(result.Errors) > 0 {
+		// NOT_FOUND is GitHub answering, not GitHub failing — e.g. the
+		// owner-type probe in project-board-sync. It must not trip the spool.
+		if result.Errors[0].Type != "NOT_FOUND" {
+			recordAPIFailure()
+		}
 		return nil, fmt.Errorf("graphql: %s", result.Errors[0].Message)
 	}
 	return result.Data, nil
