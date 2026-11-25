@@ -108,14 +108,45 @@ type Config struct {
 
 // LoadConfig reads env vars and exits with a helpful message if the token is missing.
 // defaultPort is used when PORT is not set.
+// secretOrFile reads a secret from an env var, falling back to reading it
+// from the file named by the "<NAME>_FILE" variant — the pattern used by
+// Docker secrets and systemd credentials (#71).
+func secretOrFile(name string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	if f := os.Getenv(name + "_FILE"); f != "" {
+		if data, err := os.ReadFile(f); err == nil {
+			return strings.TrimSpace(string(data))
+		} else {
+			log.Printf("warning: %s_FILE set but unreadable: %v", name, err)
+		}
+	}
+	return ""
+}
+
 func LoadConfig(botName, defaultPort string) Config {
 	cfg := Config{
-		Token:  os.Getenv("GITHUB_TOKEN"),
-		Secret: os.Getenv("WEBHOOK_SECRET"),
+		Token:  secretOrFile("GITHUB_TOKEN"),
+		Secret: secretOrFile("WEBHOOK_SECRET"),
 		Port:   os.Getenv("PORT"),
 	}
 	if cfg.Token == "" {
-		log.Fatalf("[%s] GITHUB_TOKEN is not set — copy .env.example to .env", botName)
+		log.Fatalf("[%s] GITHUB_TOKEN is not set — copy .env.example to .env (or use GITHUB_TOKEN_FILE)", botName)
+	}
+	// config validation (#71): catch malformed values at boot, not mid-run
+	if p, err := strconv.Atoi(cfg.Port); cfg.Port != "" && (err != nil || p < 1 || p > 65535) {
+		if os.Getenv("PORT") != "" {
+			log.Fatalf("[%s] PORT %q is not a valid port number", botName, os.Getenv("PORT"))
+		}
+	}
+	if list := os.Getenv("ALLOWED_REPOS"); list != "" {
+		for _, r := range strings.Split(list, ",") {
+			r = strings.TrimSpace(r)
+			if r != "" && !strings.Contains(r, "/") {
+				log.Fatalf("[%s] ALLOWED_REPOS entry %q must be owner/repo", botName, r)
+			}
+		}
 	}
 	if cfg.Port == "" {
 		cfg.Port = defaultPort
