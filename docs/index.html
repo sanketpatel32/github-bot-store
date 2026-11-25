@@ -432,6 +432,10 @@ const BOTS = [
     desc: "Labels dependabot/renovate PRs patch/minor/major from semver in the title — batch the safe ones, review the rest.",
     events: "Pull requests", perms: "pulls: read, issues: write",
     notes: ["Exactly one deps/* label per PR", "Pairs well with auto-merger: auto-merge deps/patch only"] },
+  { name: "flaky-test-tracker", emoji: "🎲", type: "webhook", port: 8129, accent: "#d29922",
+    desc: "Catches flaky CI — checks that pass on retry with zero code changes — and files tracking issues.",
+    events: "Check runs", perms: "checks: read, issues: write",
+    notes: ["FLAKE_THRESHOLD controls sensitivity (default 3)", "State persisted in flaky-state.json"] },
 ];
 
 const grid = document.getElementById("grid");
