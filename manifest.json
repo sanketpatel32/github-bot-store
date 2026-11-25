@@ -5,7 +5,7 @@
     "type": "webhook",
     "port": 8101,
     "accent": "#58a6ff",
-    "desc": "Labels PRs size/XS through size/XL by lines changed, and nudges authors to split giant PRs.",
+    "desc": "When someone opens a pull request, this bot looks at how much code changed and sticks a size label on it \u2014 XS for tiny fixes, XL for monsters. Giant PRs are hard to review, so it gently nudges the author to split them.",
     "events": "Pull requests",
     "perms": "pull-requests: write, issues: write",
     "notes": [
@@ -19,7 +19,8 @@
       "pull-requests": "write",
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "first-touch-welcomer",
@@ -27,7 +28,7 @@
     "type": "webhook",
     "port": 8102,
     "accent": "#3fb950",
-    "desc": "Posts a friendly welcome comment the first time someone opens an issue or PR.",
+    "desc": "The first time someone opens an issue or pull request in your project, this bot posts a friendly welcome comment. New contributors feel noticed instead of shouting into the void.",
     "events": "Issues, Pull requests",
     "perms": "issues: write, pull-requests: write",
     "notes": [
@@ -42,7 +43,8 @@
       "issues": "write",
       "pull-requests": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Issues"
   },
   {
     "name": "stale-bot",
@@ -50,7 +52,7 @@
     "type": "cron",
     "port": 8103,
     "accent": "#d29922",
-    "desc": "Marks issues idle 30 days as stale, closes them 7 days later. Any activity resets the clock.",
+    "desc": "Hunts down issues and pull requests nobody has touched in 30 days, marks them as stale, and closes them a week later if nobody responds. Any comment resets the clock.",
     "events": "None \u2014 polls every 12h",
     "perms": "issues: write",
     "notes": [
@@ -67,7 +69,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Issues"
   },
   {
     "name": "branch-sweeper",
@@ -75,7 +78,7 @@
     "type": "webhook",
     "port": 8104,
     "accent": "#39c5cf",
-    "desc": "Deletes the head branch automatically when a PR is merged.",
+    "desc": "Deletes branches that were merged months ago and are just cluttering up the branch list. It double-checks before deleting anything, and never touches protected branches.",
     "events": "Pull requests",
     "perms": "contents: write",
     "notes": [
@@ -90,7 +93,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Repository hygiene"
   },
   {
     "name": "conventional-pr-check",
@@ -98,7 +102,7 @@
     "type": "webhook",
     "port": 8105,
     "accent": "#a371f7",
-    "desc": "Commit status enforcing conventional-commit PR titles: feat:, fix:, chore: and friends.",
+    "desc": "Makes sure every pull request title follows the conventional format like 'fix: crash on startup' or 'feat: dark mode'. Keeps your history readable and your changelogs automatic.",
     "events": "Pull requests",
     "perms": "statuses: write, pull-requests: write",
     "notes": [
@@ -111,7 +115,8 @@
       "statuses": "write",
       "pull-requests": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "reviewer-assigner",
@@ -119,7 +124,7 @@
     "type": "webhook",
     "port": 8106,
     "accent": "#58a6ff",
-    "desc": "Auto-assigns reviewers by which paths changed \u2014 a self-hosted mini-CODEOWNERS.",
+    "desc": "Looks at which files a pull request touches and assigns the right reviewers automatically \u2014 your own mini-CODEOWNERS, no GitHub Team plan needed.",
     "events": "Pull requests",
     "perms": "pull-requests: write",
     "notes": [
@@ -133,7 +138,8 @@
       "pull-requests": "write",
       "contents": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "duplicate-issue-hunter",
@@ -141,7 +147,7 @@
     "type": "webhook",
     "port": 8107,
     "accent": "#f85149",
-    "desc": "Comments possible duplicates when a new issue's title overlaps existing ones.",
+    "desc": "When a new issue comes in, this bot searches existing ones and comments if it finds likely duplicates. Saves maintainers from answering the same bug report five times.",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
@@ -153,7 +159,8 @@
     "actions_perms": {
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Issues"
   },
   {
     "name": "todo-tracker",
@@ -161,7 +168,7 @@
     "type": "webhook",
     "port": 8108,
     "accent": "#3fb950",
-    "desc": "Opens a tracking issue for every new TODO/FIXME comment pushed to the default branch.",
+    "desc": "Watches for new TODO and FIXME comments in the code and opens a tracking issue for each one, so they don't rot in the codebase forgotten. Closes the issue when the TODO is removed.",
     "events": "Push",
     "perms": "issues: write, contents: read",
     "notes": [
@@ -174,7 +181,8 @@
       "issues": "write",
       "contents": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Repository hygiene"
   },
   {
     "name": "merge-conflict-detector",
@@ -182,7 +190,7 @@
     "type": "webhook",
     "port": 8109,
     "accent": "#d29922",
-    "desc": "When the default branch moves, warns open PRs that now conflict.",
+    "desc": "Warns you the moment a pull request can no longer merge cleanly because the main branch moved on. Flips the warning to resolved when you fix it.",
     "events": "Push",
     "perms": "pull-requests: read, issues: write",
     "notes": [
@@ -196,7 +204,8 @@
       "pull-requests": "write",
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "auto-merger",
@@ -204,7 +213,7 @@
     "type": "webhook",
     "port": 8110,
     "accent": "#a371f7",
-    "desc": "Squash-merges PRs labeled 'automerge' as soon as checks go green.",
+    "desc": "Merges pull requests automatically once they're approved and all checks pass. No more sitting around waiting to click the green button.",
     "events": "Pull requests, Check runs, Check suites, Status",
     "perms": "pull-requests: write, contents: write",
     "notes": [
@@ -220,7 +229,8 @@
       "checks": "read",
       "contents": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "repo-digest",
@@ -228,7 +238,7 @@
     "type": "cron",
     "port": 8111,
     "accent": "#39c5cf",
-    "desc": "Opens a weekly digest issue: merged PRs, issue stats, top contributors.",
+    "desc": "Posts a weekly summary issue: what got merged, what opened, what's still waiting. Like a newspaper for your repository.",
     "events": "None \u2014 runs every 7 days",
     "perms": "issues: write",
     "notes": [
@@ -243,7 +253,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Community & planning"
   },
   {
     "name": "pr-template-checker",
@@ -251,7 +262,7 @@
     "type": "webhook",
     "port": 8112,
     "accent": "#58a6ff",
-    "desc": "Nudges authors whose PR description is empty or missing template sections.",
+    "desc": "Checks that pull request authors actually filled in the template instead of leaving the placeholder text. Reminds them politely if they didn't.",
     "events": "Pull requests",
     "perms": "issues: write",
     "notes": [
@@ -264,7 +275,8 @@
       "pull-requests": "write",
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "release-drafter",
@@ -272,7 +284,7 @@
     "type": "webhook",
     "port": 8113,
     "accent": "#3fb950",
-    "desc": "Maintains a running draft release \u2014 every merged PR appends its title to the notes, grouped by type.",
+    "desc": "Keeps a draft release up to date as pull requests merge, grouped by change type. When it's time to ship, your release notes are already written.",
     "events": "Pull requests",
     "perms": "contents: write, pull-requests: read",
     "notes": [
@@ -286,7 +298,8 @@
       "contents": "write",
       "pull-requests": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Releases & CI"
   },
   {
     "name": "keyword-issue-labeler",
@@ -294,7 +307,7 @@
     "type": "webhook",
     "port": 8114,
     "accent": "#f85149",
-    "desc": "Auto-labels new issues from keywords in the title and body \u2014 bug, feature, docs, question\u2026",
+    "desc": "Reads new issues and labels them based on what they mention \u2014 'crash' gets the bug label, 'feature request' gets enhancement. Instant triage with zero effort.",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
@@ -307,7 +320,8 @@
     "actions_perms": {
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Issues"
   },
   {
     "name": "ci-failure-commenter",
@@ -315,7 +329,7 @@
     "type": "webhook",
     "port": 8115,
     "accent": "#d29922",
-    "desc": "When CI fails on a PR, comments which checks failed with links \u2014 no digging through the checks tab.",
+    "desc": "When CI fails on a pull request, this bot posts a compact comment explaining what broke, with links to the logs. Updates the same comment when it goes green again.",
     "events": "Check runs, Check suites",
     "perms": "checks: read, issues: write",
     "notes": [
@@ -329,7 +343,8 @@
       "checks": "read",
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Releases & CI"
   },
   {
     "name": "pr-aging-bot",
@@ -337,7 +352,7 @@
     "type": "cron",
     "port": 8116,
     "accent": "#e3b341",
-    "desc": "Labels open PRs by wait time \u2014 fresh/week/stale/ancient \u2014 so review backlogs are visible at a glance.",
+    "desc": "Flags pull requests that have been sitting open too long without review. Old PRs die in silence; this makes them visible.",
     "events": "none (scheduled)",
     "perms": "pulls: read, issues: write",
     "notes": [
@@ -354,7 +369,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Pull requests"
   },
   {
     "name": "review-reminder",
@@ -362,7 +378,7 @@
     "type": "cron",
     "port": 8117,
     "accent": "#a371f7",
-    "desc": "Nudges requested reviewers when a PR waits 24h+ without review \u2014 one reminder each, no spam.",
+    "desc": "Nudges reviewers who were asked to review but haven't responded. Escalates politely as days pass.",
     "events": "none (scheduled)",
     "perms": "pulls: read, issues: write",
     "notes": [
@@ -378,7 +394,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Pull requests"
   },
   {
     "name": "issue-triage-reminder",
@@ -386,7 +403,7 @@
     "type": "cron",
     "port": 8118,
     "accent": "#39c5cf",
-    "desc": "Flags issues that sit untriaged \u2014 no label, assignee, or milestone \u2014 with a needs-triage label that clears itself once triaged.",
+    "desc": "Reminds maintainers about new issues that nobody has labeled or answered. Nothing slips through the cracks.",
     "events": "none (scheduled)",
     "perms": "issues: write",
     "notes": [
@@ -401,7 +418,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Issues"
   },
   {
     "name": "changelog-checker",
@@ -409,7 +427,7 @@
     "type": "webhook",
     "port": 8119,
     "accent": "#3fb950",
-    "desc": "Commit status enforcing every PR updates the changelog \u2014 or explicitly opts out with a skip label.",
+    "desc": "Reminds authors to update the changelog when their pull request changes user-facing behavior. No more forgotten entries at release time.",
     "events": "Pull requests",
     "perms": "statuses: write, pulls: read",
     "notes": [
@@ -423,7 +441,8 @@
       "pull-requests": "write",
       "contents": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "license-header-checker",
@@ -431,7 +450,7 @@
     "type": "webhook",
     "port": 8120,
     "accent": "#58a6ff",
-    "desc": "Fails PRs whose new source files lack a license header \u2014 one managed comment lists exactly which files.",
+    "desc": "Checks that new source files carry the project's license header. Keeps you compliant without manual review.",
     "events": "Pull requests",
     "perms": "statuses: write, pulls: read, issues: write",
     "notes": [
@@ -445,7 +464,8 @@
       "pull-requests": "write",
       "contents": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "pr-path-labeler",
@@ -453,7 +473,7 @@
     "type": "webhook",
     "port": 8121,
     "accent": "#d29922",
-    "desc": "Labels PRs by which directories they touch \u2014 area/frontend, area/backend \u2014 using your repo's existing labels.",
+    "desc": "Labels pull requests by which part of the codebase they touch \u2014 frontend, backend, docs \u2014 so you can filter work by area.",
     "events": "Pull requests",
     "perms": "pulls: read, issues: write",
     "notes": [
@@ -467,7 +487,8 @@
       "issues": "write",
       "pull-requests": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "contributor-milestones",
@@ -475,7 +496,7 @@
     "type": "webhook",
     "port": 8122,
     "accent": "#f85149",
-    "desc": "Celebrates contributors \u2014 welcome comment on first merged PR, shout-outs at 5/10/25/50/100 merges.",
+    "desc": "Celebrates contributors when they hit milestones \u2014 first PR merged, tenth, fiftieth. Small celebrations keep people coming back.",
     "events": "Pull requests (closed)",
     "perms": "pulls: read, issues: write",
     "notes": [
@@ -489,7 +510,8 @@
       "issues": "write",
       "pull-requests": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Community & planning"
   },
   {
     "name": "breaking-change-guard",
@@ -497,7 +519,7 @@
     "type": "webhook",
     "port": 8123,
     "accent": "#f85149",
-    "desc": "Blocks merges that declare breaking changes until a maintainer acknowledges with the breaking-change label.",
+    "desc": "Flags pull requests that look like they break existing behavior, so they get extra scrutiny before merging.",
     "events": "Pull requests",
     "perms": "statuses: write, pulls: read, issues: write",
     "notes": [
@@ -511,7 +533,8 @@
       "pull-requests": "write",
       "contents": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "release-reminder",
@@ -519,7 +542,7 @@
     "type": "cron",
     "port": 8124,
     "accent": "#3fb950",
-    "desc": "Opens a tracking issue when unreleased commits pile up \u2014 closes itself once you ship.",
+    "desc": "Nags you when lots of unreleased work has piled up on the main branch. A gentle push to actually ship.",
     "events": "none (scheduled)",
     "perms": "contents: read, issues: write",
     "notes": [
@@ -535,7 +558,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Releases & CI"
   },
   {
     "name": "docs-link-checker",
@@ -543,7 +567,7 @@
     "type": "cron",
     "port": 8125,
     "accent": "#39c5cf",
-    "desc": "Scans your markdown for dead links \u2014 one self-updating issue lists them, closes itself when fixed.",
+    "desc": "Checks links in your documentation and README, and reports the dead ones. Nothing embarrasses like a 404 in the getting-started guide.",
     "events": "none (scheduled)",
     "perms": "contents: read, issues: write",
     "notes": [
@@ -559,7 +583,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Repository hygiene"
   },
   {
     "name": "issue-link-checker",
@@ -567,7 +592,7 @@
     "type": "webhook",
     "port": 8126,
     "accent": "#a371f7",
-    "desc": "Validates external links in new issues \u2014 one comment flags dead repro links before triage wastes time on them.",
+    "desc": "Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
@@ -580,7 +605,8 @@
     "actions_perms": {
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Issues"
   },
   {
     "name": "issue-form-validator",
@@ -588,7 +614,7 @@
     "type": "webhook",
     "port": 8127,
     "accent": "#e3b341",
-    "desc": "Enforces your issue template \u2014 labels issues missing required sections, auto-clears when they fix it.",
+    "desc": "Makes sure new issues follow your template \u2014 a bug report without steps to reproduce gets a friendly request to fill it in properly.",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
@@ -601,7 +627,8 @@
     "actions_perms": {
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Issues"
   },
   {
     "name": "dependency-update-grouper",
@@ -609,7 +636,7 @@
     "type": "webhook",
     "port": 8128,
     "accent": "#58a6ff",
-    "desc": "Labels dependabot/renovate PRs patch/minor/major from semver in the title \u2014 batch the safe ones, review the rest.",
+    "desc": "Groups the flood of dependabot pull requests into batches so you review them once a week instead of every single day.",
     "events": "Pull requests",
     "perms": "pulls: read, issues: write",
     "notes": [
@@ -623,7 +650,8 @@
       "issues": "write",
       "pull-requests": "read"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Releases & CI"
   },
   {
     "name": "flaky-test-tracker",
@@ -631,7 +659,7 @@
     "type": "webhook",
     "port": 8129,
     "accent": "#d29922",
-    "desc": "Catches flaky CI \u2014 checks that pass on retry with zero code changes \u2014 and files tracking issues.",
+    "desc": "Notices when the same test fails intermittently across runs and files a tracking issue. Flaky tests stop being invisible.",
     "events": "Check runs",
     "perms": "checks: read, issues: write",
     "notes": [
@@ -645,7 +673,8 @@
       "checks": "read",
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Releases & CI"
   },
   {
     "name": "merge-queue-assistant",
@@ -653,7 +682,7 @@
     "type": "webhook",
     "port": 8130,
     "accent": "#a371f7",
-    "desc": "A minimal merge queue \u2014 label PRs queue/merge and the bot enforces FIFO order with queue/next promotion.",
+    "desc": "Shows which pull request is next in line to merge, labeling the queue so everyone knows the order.",
     "events": "Pull requests",
     "perms": "pulls: read, issues: write",
     "notes": [
@@ -667,7 +696,8 @@
       "pull-requests": "write",
       "issues": "write"
     },
-    "required_env": []
+    "required_env": [],
+    "category": "Pull requests"
   },
   {
     "name": "discussion-triage-bot",
@@ -675,7 +705,7 @@
     "type": "cron",
     "port": 8131,
     "accent": "#39c5cf",
-    "desc": "Keeps discussions from rotting \u2014 one self-updating issue lists questions nobody has answered.",
+    "desc": "Flags discussions that have been sitting unanswered. Questions from your community deserve replies.",
     "events": "none (scheduled)",
     "perms": "discussions: read, issues: write",
     "notes": [
@@ -691,7 +721,8 @@
     },
     "required_env": [
       "REPO"
-    ]
+    ],
+    "category": "Community & planning"
   },
   {
     "name": "project-board-sync",
@@ -699,7 +730,7 @@
     "type": "webhook",
     "port": 8132,
     "accent": "#e3b341",
-    "desc": "Keeps Projects v2 boards honest \u2014 new issues/PRs appear automatically, cards move as work progresses.",
+    "desc": "Keeps your GitHub project board in sync automatically \u2014 new issues and PRs land on the board, status follows the work.",
     "events": "Issues, pull requests",
     "perms": "issues: read, pulls: read, projects: write",
     "notes": [
@@ -717,6 +748,7 @@
     "required_env": [
       "PROJECT_OWNER",
       "PROJECT_NUMBER"
-    ]
+    ],
+    "category": "Community & planning"
   }
 ]

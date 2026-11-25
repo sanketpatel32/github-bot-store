@@ -21,15 +21,16 @@ import (
 var botPage string
 
 type bot struct {
-	Name   string   `json:"name"`
-	Emoji  string   `json:"emoji"`
-	Type   string   `json:"type"`
-	Port   int      `json:"port"`
-	Accent string   `json:"accent"`
-	Desc   string   `json:"desc"`
-	Events string   `json:"events"`
-	Perms  string   `json:"perms"`
-	Notes  []string `json:"notes"`
+	Name     string   `json:"name"`
+	Emoji    string   `json:"emoji"`
+	Type     string   `json:"type"`
+	Port     int      `json:"port"`
+	Accent   string   `json:"accent"`
+	Desc     string   `json:"desc"`
+	Category string   `json:"category"`
+	Events   string   `json:"events"`
+	Perms    string   `json:"perms"`
+	Notes    []string `json:"notes"`
 	// machine-readable generation metadata (#113): the exact GitHub event
 	// names the bot consumes, minimal Actions permissions, and required
 	// settings beyond GITHUB_TOKEN — the catalog generator emits correct,
@@ -47,7 +48,7 @@ func renderJS(bots []bot) string {
 			notes[i] = fmt.Sprintf("%q", n)
 		}
 		fmt.Fprintf(&sb, "  { name: %q, emoji: %q, type: %q, port: %d, accent: %q,\n", b.Name, b.Emoji, b.Type, b.Port, b.Accent)
-		fmt.Fprintf(&sb, "    desc: %q,\n", b.Desc)
+		fmt.Fprintf(&sb, "    desc: %q, category: %q,\n", b.Desc, b.Category)
 		fmt.Fprintf(&sb, "    events: %q, perms: %q,\n", b.Events, b.Perms)
 		fmt.Fprintf(&sb, "    notes: [%s],\n", strings.Join(notes, ", "))
 		evs := make([]string, len(b.GhEvents))
