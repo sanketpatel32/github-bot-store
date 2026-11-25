@@ -86,6 +86,65 @@ func seenDelivery(id string) bool {
 	return false
 }
 
+// ---- lightweight metrics + structured logs (#35) ----
+
+var metrics = struct {
+	sync.Mutex
+	events   map[string]int
+	errors   map[string]int
+	apiCalls int
+}{events: map[string]int{}, errors: map[string]int{}}
+
+// Logf emits a structured key=value log line — greppable without a log
+// pipeline, still plain enough for journald (#35).
+func Logf(bot, level, msg string, kv ...any) {
+	pairs := ""
+	for i := 0; i+1 < len(kv); i += 2 {
+		pairs += fmt.Sprintf(" %v=%v", kv[i], kv[i+1])
+	}
+	log.Printf("level=%s bot=%s msg=%q%s", level, bot, msg, pairs)
+}
+
+// recordEvent increments the per-event-type counter.
+func recordEvent(event string) {
+	metrics.Lock()
+	metrics.events[event]++
+	metrics.Unlock()
+}
+
+// recordError increments the per-event error counter.
+func recordError(event string) {
+	metrics.Lock()
+	metrics.errors[event]++
+	metrics.Unlock()
+}
+
+// metricsHandler exposes counters in the Prometheus text format — scrape it
+// or curl it, no client library needed at this scale.
+func metricsHandler(name string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		metrics.Lock()
+		defer metrics.Unlock()
+		fmt.Fprintf(w, "# TYPE ghbot_events_total counter\n")
+		for ev, n := range metrics.events {
+			fmt.Fprintf(w, "ghbot_events_total{bot=%q,event=%q} %d\n", name, ev, n)
+		}
+		fmt.Fprintf(w, "# TYPE ghbot_errors_total counter\n")
+		for ev, n := range metrics.errors {
+			fmt.Fprintf(w, "ghbot_errors_total{bot=%q,event=%q} %d\n", name, ev, n)
+		}
+		fmt.Fprintf(w, "# TYPE ghbot_api_calls_total counter\nghbot_api_calls_total{bot=%q} %d\n", name, metrics.apiCalls)
+	}
+}
+
+// RecordAPICall increments the outbound API call counter — called by the
+// client on every request.
+func (c *Client) recordAPI() {
+	metrics.Lock()
+	metrics.apiCalls++
+	metrics.Unlock()
+}
+
 // ---- per-resource mutation coordination (#72) ----
 
 var resourceLocks = struct {
@@ -220,6 +279,7 @@ func ServeHealth(cfg Config, name string) {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
+	mux.HandleFunc("/metrics", metricsHandler(name))
 	log.Printf("[%s] health-only server listening on %s", name, newServer(cfg.Port, nil).Addr)
 	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
@@ -319,6 +379,7 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
+	mux.HandleFunc("/metrics", metricsHandler(name))
 	mux.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -393,9 +454,11 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 				log.Printf("[%s] spool write failed: %v", name, err)
 			}
 		}
+		recordEvent(event)
 		job := func() {
 			defer func() {
 				if rec := recover(); rec != nil {
+					recordError(event)
 					log.Printf("[%s] panic handling %s: %v — delivery stays in spool for replay", name, event, rec)
 				}
 			}()
@@ -579,6 +642,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 		}
 		reader = bytes.NewReader(data)
 	}
+	c.recordAPI()
 	req, err := http.NewRequest(method, "https://api.github.com"+path, reader)
 	if err != nil {
 		return nil, err
