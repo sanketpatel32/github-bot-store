@@ -421,7 +421,7 @@ const BOTS = [
     desc: "When CI fails on a PR, comments which checks failed with links — no digging through the checks tab.",
     events: "Check runs, Check suites", perms: "checks: read, issues: write",
     notes: ["Collapses repeat failures into one updated comment"],
-    ghEvents: ["check_run"], actionsPerms: {"checks": "read", "issues": "write"}, requiredEnv: [] },
+    ghEvents: ["check_run", "check_suite"], actionsPerms: {"checks": "read", "issues": "write"}, requiredEnv: [] },
   { name: "pr-aging-bot", emoji: "⏳", type: "cron", port: 8116, accent: "#e3b341",
     desc: "Labels open PRs by wait time — fresh/week/stale/ancient — so review backlogs are visible at a glance.",
     events: "none (scheduled)", perms: "pulls: read, issues: write",

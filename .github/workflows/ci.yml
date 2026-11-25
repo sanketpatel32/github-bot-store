@@ -73,3 +73,5 @@ jobs:
       # replays canned events at real bot binaries against the fake API and
       # asserts exact mutation transcripts — no network, no secrets (#145)
       - run: go run ./tools/previewtest
+      # permission/event reference must stay complete and consistent (#146)
+      - run: go run ./tools/checkmatrix
