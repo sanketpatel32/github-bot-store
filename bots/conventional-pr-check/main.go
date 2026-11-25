@@ -52,7 +52,7 @@ type PREvent struct {
 
 func main() {
 	cfg := ghbot.LoadConfig("conventional-pr-check", "8105")
-	if ghbot.HandleCLIArgs("conventional-pr-check", cfg) {
+	if ghbot.HandleCLIArgs("conventional-pr-check", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

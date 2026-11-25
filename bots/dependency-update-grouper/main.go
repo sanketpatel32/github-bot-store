@@ -55,7 +55,7 @@ func bumpSize(title string) string {
 
 func main() {
 	cfg := ghbot.LoadConfig("dependency-update-grouper", "8128")
-	if ghbot.HandleCLIArgs("dependency-update-grouper", cfg) {
+	if ghbot.HandleCLIArgs("dependency-update-grouper", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

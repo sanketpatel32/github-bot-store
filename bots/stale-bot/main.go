@@ -250,7 +250,7 @@ func sweep(client *ghbot.Client, repo string, st *state, staleDays, closeDays in
 
 func main() {
 	cfg := ghbot.LoadConfig("stale-bot", "8103")
-	if ghbot.HandleCLIArgs("stale-bot", cfg) {
+	if ghbot.HandleCLIArgs("stale-bot", cfg, "cron") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

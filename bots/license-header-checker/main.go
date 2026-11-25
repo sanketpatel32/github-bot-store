@@ -57,7 +57,7 @@ func sourceExt(path string) bool {
 
 func main() {
 	cfg := ghbot.LoadConfig("license-header-checker", "8120")
-	if ghbot.HandleCLIArgs("license-header-checker", cfg) {
+	if ghbot.HandleCLIArgs("license-header-checker", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

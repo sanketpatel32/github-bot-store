@@ -179,7 +179,7 @@ func sweep(gh *ghbot.Client, repo, branch string) {
 
 func main() {
 	cfg := ghbot.LoadConfig("docs-link-checker", "8125")
-	if ghbot.HandleCLIArgs("docs-link-checker", cfg) {
+	if ghbot.HandleCLIArgs("docs-link-checker", cfg, "cron") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

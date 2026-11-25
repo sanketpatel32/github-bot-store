@@ -141,7 +141,7 @@ func findOpenTODOIssue(client *ghbot.Client, repo, hash string) int {
 
 func main() {
 	cfg := ghbot.LoadConfig("todo-tracker", "8108")
-	if ghbot.HandleCLIArgs("todo-tracker", cfg) {
+	if ghbot.HandleCLIArgs("todo-tracker", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

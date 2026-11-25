@@ -29,7 +29,7 @@ func branchFromRef(ref string) string {
 
 func main() {
 	cfg := ghbot.LoadConfig("merge-conflict-detector", "8109")
-	if ghbot.HandleCLIArgs("merge-conflict-detector", cfg) {
+	if ghbot.HandleCLIArgs("merge-conflict-detector", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

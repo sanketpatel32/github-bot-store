@@ -47,7 +47,7 @@ func isFirstTimer(client *ghbot.Client, repo, user string) (bool, error) {
 
 func main() {
 	cfg := ghbot.LoadConfig("first-touch-welcomer", "8102")
-	if ghbot.HandleCLIArgs("first-touch-welcomer", cfg) {
+	if ghbot.HandleCLIArgs("first-touch-welcomer", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

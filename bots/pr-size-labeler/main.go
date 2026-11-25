@@ -107,7 +107,7 @@ var labelColors = map[string]string{
 
 func main() {
 	cfg := ghbot.LoadConfig("pr-size-labeler", "8101")
-	if ghbot.HandleCLIArgs("pr-size-labeler", cfg) {
+	if ghbot.HandleCLIArgs("pr-size-labeler", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

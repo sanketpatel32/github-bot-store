@@ -48,7 +48,7 @@ func isBreaking(title, body string) bool {
 
 func main() {
 	cfg := ghbot.LoadConfig("breaking-change-guard", "8123")
-	if ghbot.HandleCLIArgs("breaking-change-guard", cfg) {
+	if ghbot.HandleCLIArgs("breaking-change-guard", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

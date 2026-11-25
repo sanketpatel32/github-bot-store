@@ -159,7 +159,7 @@ func mentionsUser(body, login string) bool {
 
 func main() {
 	cfg := ghbot.LoadConfig("review-reminder", "8117")
-	if ghbot.HandleCLIArgs("review-reminder", cfg) {
+	if ghbot.HandleCLIArgs("review-reminder", cfg, "cron") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

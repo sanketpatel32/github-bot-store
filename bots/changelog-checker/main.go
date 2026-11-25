@@ -45,7 +45,7 @@ func skipLabel() string {
 
 func main() {
 	cfg := ghbot.LoadConfig("changelog-checker", "8119")
-	if ghbot.HandleCLIArgs("changelog-checker", cfg) {
+	if ghbot.HandleCLIArgs("changelog-checker", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

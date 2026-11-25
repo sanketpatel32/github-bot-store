@@ -39,7 +39,7 @@ type CheckEvent struct {
 
 func main() {
 	cfg := ghbot.LoadConfig("ci-failure-commenter", "8115")
-	if ghbot.HandleCLIArgs("ci-failure-commenter", cfg) {
+	if ghbot.HandleCLIArgs("ci-failure-commenter", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

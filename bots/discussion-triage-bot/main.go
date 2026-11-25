@@ -159,7 +159,7 @@ func findManaged(client *ghbot.Client, repo, marker string) int {
 
 func main() {
 	cfg := ghbot.LoadConfig("discussion-triage-bot", "8131")
-	if ghbot.HandleCLIArgs("discussion-triage-bot", cfg) {
+	if ghbot.HandleCLIArgs("discussion-triage-bot", cfg, "cron") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

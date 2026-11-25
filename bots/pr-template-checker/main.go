@@ -109,7 +109,7 @@ func validate(body string, required, optional []string) (missing, empty []string
 
 func main() {
 	cfg := ghbot.LoadConfig("pr-template-checker", "8112")
-	if ghbot.HandleCLIArgs("pr-template-checker", cfg) {
+	if ghbot.HandleCLIArgs("pr-template-checker", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

@@ -85,7 +85,7 @@ func branchInUseByOtherPR(client *ghbot.Client, repo, branch string, mergedPRNum
 
 func main() {
 	cfg := ghbot.LoadConfig("branch-sweeper", "8104")
-	if ghbot.HandleCLIArgs("branch-sweeper", cfg) {
+	if ghbot.HandleCLIArgs("branch-sweeper", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

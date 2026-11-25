@@ -224,7 +224,11 @@ var Version = "dev"
 //	<bot> doctor   — validate configuration and API connectivity, exit non-zero on failure
 //
 // Returns true if a subcommand ran (caller should exit).
-func HandleCLIArgs(name string, cfg Config) bool {
+// HandleCLIArgs processes the version/doctor subcommands. botType ("webhook"
+// or "cron") lets doctor validate the configuration a bot actually needs —
+// cron bots never serve webhooks, so demanding a webhook secret from them
+// is a false failure (#144).
+func HandleCLIArgs(name string, cfg Config, botType ...string) bool {
 	if len(os.Args) < 2 {
 		return false
 	}
@@ -233,12 +237,16 @@ func HandleCLIArgs(name string, cfg Config) bool {
 		fmt.Printf("%s %s\n", name, Version)
 		return true
 	case "doctor":
-		return runDoctor(name, cfg)
+		kind := "webhook"
+		if len(botType) > 0 {
+			kind = botType[0]
+		}
+		return runDoctor(name, cfg, kind)
 	}
 	return false
 }
 
-func runDoctor(name string, cfg Config) bool {
+func runDoctor(name string, cfg Config, botType string) bool {
 	problems := 0
 	check := func(ok bool, label, detail string) {
 		status := "ok"
@@ -249,10 +257,21 @@ func runDoctor(name string, cfg Config) bool {
 		fmt.Printf("[%s] %s: %s\n", status, label, detail)
 	}
 
-	check(cfg.Token != "", "token", "GITHUB_TOKEN is set")
-	if os.Getenv("GITHUB_ACTIONS") != "true" {
+	check(cfg.Token != "" || appCfg != nil, "token", "GITHUB_TOKEN or app credentials set")
+	// webhook secrets only matter for bots that serve webhooks (#144)
+	if botType == "webhook" && os.Getenv("GITHUB_ACTIONS") != "true" {
 		webhook := cfg.Secret != "" || os.Getenv("ALLOW_UNSIGNED_WEBHOOKS") == "true"
 		check(webhook, "webhook-secret", "WEBHOOK_SECRET set (or unsigned explicitly allowed)")
+	}
+	// cron bots die at boot without REPO — diagnose it here instead (#144)
+	if botType == "cron" {
+		repo := os.Getenv("REPO")
+		check(strings.Contains(repo, "/"), "repo-config", "REPO is set to owner/repo")
+	}
+	// project-board-sync silently idles without these — catch it in doctor
+	if name == "project-board-sync" {
+		check(os.Getenv("PROJECT_OWNER") != "" && os.Getenv("PROJECT_NUMBER") != "",
+			"project-config", "PROJECT_OWNER and PROJECT_NUMBER set")
 	}
 
 	// connectivity + auth validity

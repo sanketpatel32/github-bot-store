@@ -160,7 +160,7 @@ func setStatus(client *ghbot.Client, projectID, itemID, fieldID, optionID string
 
 func main() {
 	cfg := ghbot.LoadConfig("project-board-sync", "8132")
-	if ghbot.HandleCLIArgs("project-board-sync", cfg) {
+	if ghbot.HandleCLIArgs("project-board-sync", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

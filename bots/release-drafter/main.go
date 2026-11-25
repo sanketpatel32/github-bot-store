@@ -94,7 +94,7 @@ func insertEntry(body, heading, entry string, prNumber int) string {
 
 func main() {
 	cfg := ghbot.LoadConfig("release-drafter", "8113")
-	if ghbot.HandleCLIArgs("release-drafter", cfg) {
+	if ghbot.HandleCLIArgs("release-drafter", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)

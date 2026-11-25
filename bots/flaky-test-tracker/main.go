@@ -70,7 +70,7 @@ func (st *state) save() {
 
 func main() {
 	cfg := ghbot.LoadConfig("flaky-test-tracker", "8129")
-	if ghbot.HandleCLIArgs("flaky-test-tracker", cfg) {
+	if ghbot.HandleCLIArgs("flaky-test-tracker", cfg, "webhook") {
 		return
 	}
 	client := ghbot.NewClient(cfg.Token)
