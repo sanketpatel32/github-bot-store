@@ -150,7 +150,7 @@ func similarity(a, b []string) int {
 	if len(b) < smaller {
 		smaller = len(b)
 	}
-	score := overlap * 100 / (smaller + 1)
+	score := overlap * 100 / smaller
 	// order bonus: shared adjacent pairs
 	pairsA := map[string]bool{}
 	for i := 0; i+1 < len(a); i++ {
