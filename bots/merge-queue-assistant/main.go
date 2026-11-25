@@ -38,6 +38,7 @@ func reconcile(client *ghbot.Client, repo string) {
 		labels    map[string]bool
 	}
 	var queue []queuedPR
+	nextHolders := map[int]bool{} // every open PR carrying queue/next, queued or not
 	for _, raw := range items {
 		var pr struct {
 			Number    int       `json:"number"`
@@ -52,6 +53,9 @@ func reconcile(client *ghbot.Client, repo string) {
 		lset := map[string]bool{}
 		for _, l := range pr.Labels {
 			lset[l.Name] = true
+		}
+		if lset["queue/next"] {
+			nextHolders[pr.Number] = true
 		}
 		if lset["queue/merge"] {
 			queue = append(queue, queuedPR{pr.Number, pr.CreatedAt, lset})
@@ -74,7 +78,20 @@ func reconcile(client *ghbot.Client, repo string) {
 		}
 		if !isHead && hasNext {
 			client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/queue/next", repo, pr.number), nil)
+			delete(nextHolders, pr.number)
 			log.Printf("PR #%d stripped of stale queue/next", pr.number)
+		}
+	}
+	// a PR removed from the queue keeps its queue/next label unless we strip
+	// it here — otherwise two PRs advertise head-of-queue at once (#107)
+	head := 0
+	if len(queue) > 0 {
+		head = queue[0].number
+	}
+	for n := range nextHolders {
+		if n != head {
+			client.Do("DELETE", fmt.Sprintf("/repos/%s/issues/%d/labels/queue/next", repo, n), nil)
+			log.Printf("PR #%d stripped of orphaned queue/next (no longer queued)", n)
 		}
 	}
 	if len(queue) > 1 {
