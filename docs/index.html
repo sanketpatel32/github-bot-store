@@ -281,6 +281,41 @@
     border: 1px solid var(--border); color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
   }
   .typebadge.cron { color: var(--orange); }
+
+  /* ---------- scroll-in + microinteractions ---------- */
+  .card { opacity: 0; transform: translateY(18px); }
+  .card.in { opacity: 1; transform: none; transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1), border-color .2s, box-shadow .2s; }
+  .card.in:hover { transition: all .18s ease; }
+  .card .badge { transition: transform .22s cubic-bezier(.3,1.4,.5,1); }
+  .card:hover .badge { transform: scale(1.12) rotate(-4deg); }
+  .card h4.bottitle { transition: color .18s; }
+  .card:hover h4.bottitle { color: var(--card-accent, var(--accent)); }
+  .catnav a { transition: all .2s; }
+  .catnav a.spot { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,.1); }
+  .step { transition: transform .2s, border-color .2s; }
+  .step:hover { transform: translateY(-3px); border-color: var(--accent); }
+  details.tech { margin-top: 22px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  details.tech summary {
+    padding: 13px 18px; cursor: pointer; color: var(--muted); font-size: .9rem; user-select: none;
+    list-style: none; display: flex; align-items: center; gap: 10px; transition: color .15s, background .15s;
+  }
+  details.tech summary:hover { color: var(--text); background: rgba(88,166,255,.05); }
+  details.tech summary::before { content: "▸"; transition: transform .2s; display: inline-block; }
+  details.tech[open] summary::before { transform: rotate(90deg); }
+  details.tech .techbody { padding: 4px 18px 18px; border-top: 1px solid var(--border); }
+  .ezsteps { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 6px; }
+  .ezstep { display: flex; gap: 14px; align-items: flex-start; }
+  .ezstep .ezn {
+    width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: rgba(63,185,80,.15); color: var(--green);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .82rem; font-family: var(--mono);
+  }
+  .ezstep p { color: var(--text); font-size: .95rem; line-height: 1.5; }
+  .ezstep p small { color: var(--muted); display: block; margin-top: 2px; font-size: .83rem; }
+  .facts { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 4px; }
+  .fact { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 8px 13px; font-size: .84rem; color: var(--muted); }
+  .fact b { color: var(--text); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .card { opacity: 1; transform: none; } }
+
   @media (max-width: 640px) {
     #search { width: 100%; }
     .navlinks a:not(.gh-btn) { display: none; }
@@ -407,162 +442,162 @@
 <script>
 const BOTS = [
   { name: "pr-size-labeler", emoji: "📏", type: "webhook", port: 8101, accent: "#58a6ff",
-    desc: "When someone opens a pull request, this bot looks at how much code changed and sticks a size label on it — XS for tiny fixes, XL for monsters. Giant PRs are hard to review, so it gently nudges the author to split them.", category: "Pull requests",
+    desc: "When someone opens a pull request, this bot looks at how much code changed and sticks a size label on it — XS for tiny fixes, XL for monsters. Giant PRs are hard to review, so it gently nudges the author to split them.", category: "Pull requests", title: "Sizes up pull requests",
     events: "Pull requests", perms: "pull-requests: write, issues: write",
     notes: ["Creates the size/* labels automatically", "XL threshold is 800+ lines"],
     ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "first-touch-welcomer", emoji: "👋", type: "webhook", port: 8102, accent: "#3fb950",
-    desc: "The first time someone opens an issue or pull request in your project, this bot posts a friendly welcome comment. New contributors feel noticed instead of shouting into the void.", category: "Issues",
+    desc: "The first time someone opens an issue or pull request in your project, this bot posts a friendly welcome comment. New contributors feel noticed instead of shouting into the void.", category: "Issues", title: "Welcomes newcomers",
     events: "Issues, Pull requests", perms: "issues: write, pull-requests: write",
     notes: ["Skips owners, members, and collaborators", "First-timer detection via the search API"],
     ghEvents: ["issues", "pull_request"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "stale-bot", emoji: "🥀", type: "cron", port: 8103, accent: "#d29922",
-    desc: "Hunts down issues and pull requests nobody has touched in 30 days, marks them as stale, and closes them a week later if nobody responds. Any comment resets the clock.", category: "Issues",
+    desc: "Hunts down issues and pull requests nobody has touched in 30 days, marks them as stale, and closes them a week later if nobody responds. Any comment resets the clock.", category: "Issues", title: "Closes forgotten issues",
     events: "None — polls every 12h", perms: "issues: write",
     notes: ["Requires REPO=owner/name env var", "STALE_DAYS and CLOSE_AFTER_DAYS configurable"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "read", "issues": "write", "pull-requests": "write"}, requiredEnv: ["REPO"] },
   { name: "branch-sweeper", emoji: "🧹", type: "webhook", port: 8104, accent: "#39c5cf",
-    desc: "Deletes branches that were merged months ago and are just cluttering up the branch list. It double-checks before deleting anything, and never touches protected branches.", category: "Repository hygiene",
+    desc: "Deletes branches that were merged months ago and are just cluttering up the branch list. It double-checks before deleting anything, and never touches protected branches.", category: "Repository hygiene", title: "Deletes dead branches",
     events: "Pull requests", perms: "contents: write",
     notes: ["Never touches forks or protected branches (main, develop, release…)"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "write", "pull-requests": "read"}, requiredEnv: ["REPO"] },
   { name: "conventional-pr-check", emoji: "✍️", type: "webhook", port: 8105, accent: "#a371f7",
-    desc: "Makes sure every pull request title follows the conventional format like 'fix: crash on startup' or 'feat: dark mode'. Keeps your history readable and your changelogs automatic.", category: "Pull requests",
+    desc: "Makes sure every pull request title follows the conventional format like 'fix: crash on startup' or 'feat: dark mode'. Keeps your history readable and your changelogs automatic.", category: "Pull requests", title: "Keeps PR titles tidy",
     events: "Pull requests", perms: "statuses: write, pull-requests: write",
     notes: ["Make it a required check in branch protection to block merges"],
     ghEvents: ["pull_request"], actionsPerms: {"pull-requests": "read", "statuses": "write"}, requiredEnv: [] },
   { name: "reviewer-assigner", emoji: "👀", type: "webhook", port: 8106, accent: "#58a6ff",
-    desc: "Looks at which files a pull request touches and assigns the right reviewers automatically — your own mini-CODEOWNERS, no GitHub Team plan needed.", category: "Pull requests",
+    desc: "Looks at which files a pull request touches and assigns the right reviewers automatically — your own mini-CODEOWNERS, no GitHub Team plan needed.", category: "Pull requests", title: "Finds the right reviewers",
     events: "Pull requests", perms: "pull-requests: write",
     notes: ["Configure path prefixes in reviewers.json", "Never assigns the PR author"],
     ghEvents: ["pull_request"], actionsPerms: {"contents": "read", "pull-requests": "write"}, requiredEnv: [] },
   { name: "duplicate-issue-hunter", emoji: "🔍", type: "webhook", port: 8107, accent: "#f85149",
-    desc: "When a new issue comes in, this bot searches existing ones and comments if it finds likely duplicates. Saves maintainers from answering the same bug report five times.", category: "Issues",
+    desc: "When a new issue comes in, this bot searches existing ones and comments if it finds likely duplicates. Saves maintainers from answering the same bug report five times.", category: "Issues", title: "Spots duplicate reports",
     events: "Issues", perms: "issues: write",
     notes: ["Only fires on 2+ keyword overlap — vague issues stay quiet"],
     ghEvents: ["issues"], actionsPerms: {"issues": "write"}, requiredEnv: [] },
   { name: "todo-tracker", emoji: "📝", type: "webhook", port: 8108, accent: "#3fb950",
-    desc: "Watches for new TODO and FIXME comments in the code and opens a tracking issue for each one, so they don't rot in the codebase forgotten. Closes the issue when the TODO is removed.", category: "Repository hygiene",
+    desc: "Watches for new TODO and FIXME comments in the code and opens a tracking issue for each one, so they don't rot in the codebase forgotten. Closes the issue when the TODO is removed.", category: "Repository hygiene", title: "Never forgets a TODO",
     events: "Push", perms: "issues: write, contents: read",
     notes: ["Dedupes by content hash — no duplicates from merges"],
     ghEvents: ["push"], actionsPerms: {"contents": "read", "issues": "write"}, requiredEnv: [] },
   { name: "merge-conflict-detector", emoji: "⚔️", type: "webhook", port: 8109, accent: "#d29922",
-    desc: "Warns you the moment a pull request can no longer merge cleanly because the main branch moved on. Flips the warning to resolved when you fix it.", category: "Pull requests",
+    desc: "Warns you the moment a pull request can no longer merge cleanly because the main branch moved on. Flips the warning to resolved when you fix it.", category: "Pull requests", title: "Warns about merge conflicts",
     events: "Push", perms: "pull-requests: read, issues: write",
     notes: ["Retries once after 3s — GitHub computes mergeability async"],
     ghEvents: ["push", "pull_request"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "auto-merger", emoji: "🚀", type: "webhook", port: 8110, accent: "#a371f7",
-    desc: "Merges pull requests automatically once they're approved and all checks pass. No more sitting around waiting to click the green button.", category: "Pull requests",
+    desc: "Merges pull requests automatically once they're approved and all checks pass. No more sitting around waiting to click the green button.", category: "Pull requests", title: "Merges when everything passes",
     events: "Pull requests, Check runs, Check suites, Status", perms: "pull-requests: write, contents: write",
     notes: ["Repos without CI count as green", "Create the automerge label first"],
     ghEvents: ["pull_request", "check_run"], actionsPerms: {"checks": "read", "contents": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "repo-digest", emoji: "📊", type: "cron", port: 8111, accent: "#39c5cf",
-    desc: "Posts a weekly summary issue: what got merged, what opened, what's still waiting. Like a newspaper for your repository.", category: "Community & planning",
+    desc: "Posts a weekly summary issue: what got merged, what opened, what's still waiting. Like a newspaper for your repository.", category: "Community & planning", title: "Writes your weekly newspaper",
     events: "None — runs every 7 days", perms: "issues: write",
     notes: ["Requires REPO=owner/name env var"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "read", "issues": "write"}, requiredEnv: ["REPO"] },
   { name: "pr-template-checker", emoji: "📋", type: "webhook", port: 8112, accent: "#58a6ff",
-    desc: "Checks that pull request authors actually filled in the template instead of leaving the placeholder text. Reminds them politely if they didn't.", category: "Pull requests",
+    desc: "Checks that pull request authors actually filled in the template instead of leaving the placeholder text. Reminds them politely if they didn't.", category: "Pull requests", title: "Makes people fill in the form",
     events: "Pull requests", perms: "issues: write",
     notes: ["REQUIRED_SECTIONS env var, e.g. 'summary,test plan'"],
     ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "release-drafter", emoji: "🏷️", type: "webhook", port: 8113, accent: "#3fb950",
-    desc: "Keeps a draft release up to date as pull requests merge, grouped by change type. When it's time to ship, your release notes are already written.", category: "Releases & CI",
+    desc: "Keeps a draft release up to date as pull requests merge, grouped by change type. When it's time to ship, your release notes are already written.", category: "Releases & CI", title: "Writes your release notes",
     events: "Pull requests", perms: "contents: write, pull-requests: read",
     notes: ["Groups entries by conventional-commit prefix", "Publish the draft whenever you cut a release"],
     ghEvents: ["push"], actionsPerms: {"contents": "write", "pull-requests": "read"}, requiredEnv: [] },
   { name: "keyword-issue-labeler", emoji: "🏷", type: "webhook", port: 8114, accent: "#f85149",
-    desc: "Reads new issues and labels them based on what they mention — 'crash' gets the bug label, 'feature request' gets enhancement. Instant triage with zero effort.", category: "Issues",
+    desc: "Reads new issues and labels them based on what they mention — 'crash' gets the bug label, 'feature request' gets enhancement. Instant triage with zero effort.", category: "Issues", title: "Labels issues instantly",
     events: "Issues", perms: "issues: write",
     notes: ["Configurable keyword → label map in labels.json", "Ships with sensible defaults"],
     ghEvents: ["issues"], actionsPerms: {"issues": "write"}, requiredEnv: [] },
   { name: "ci-failure-commenter", emoji: "💥", type: "webhook", port: 8115, accent: "#d29922",
-    desc: "When CI fails on a pull request, this bot posts a compact comment explaining what broke, with links to the logs. Updates the same comment when it goes green again.", category: "Releases & CI",
+    desc: "When CI fails on a pull request, this bot posts a compact comment explaining what broke, with links to the logs. Updates the same comment when it goes green again.", category: "Releases & CI", title: "Explains why CI failed",
     events: "Check runs, Check suites", perms: "checks: read, issues: write",
     notes: ["Collapses repeat failures into one updated comment"],
     ghEvents: ["check_run", "check_suite"], actionsPerms: {"checks": "read", "issues": "write"}, requiredEnv: [] },
   { name: "pr-aging-bot", emoji: "⏳", type: "cron", port: 8116, accent: "#e3b341",
-    desc: "Flags pull requests that have been sitting open too long without review. Old PRs die in silence; this makes them visible.", category: "Pull requests",
+    desc: "Flags pull requests that have been sitting open too long without review. Old PRs die in silence; this makes them visible.", category: "Pull requests", title: "Flags abandoned pull requests",
     events: "none (scheduled)", perms: "pulls: read, issues: write",
     notes: ["Skips drafts by default (SKIP_DRAFTS=false to include)", "Only writes when a PR crosses a tier boundary", "Run nightly as a GitHub Action or crontab"],
     ghEvents: ["schedule"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: ["REPO"] },
   { name: "review-reminder", emoji: "🔔", type: "cron", port: 8117, accent: "#a371f7",
-    desc: "Nudges reviewers who were asked to review but haven't responded. Escalates politely as days pass.", category: "Pull requests",
+    desc: "Nudges reviewers who were asked to review but haven't responded. Escalates politely as days pass.", category: "Pull requests", title: "Nags slow reviewers",
     events: "none (scheduled)", perms: "pulls: read, issues: write",
     notes: ["REMIND_AFTER_HOURS configures the wait (default 24)", "Tracks reminders via managed comment markers"],
     ghEvents: ["schedule"], actionsPerms: {"issues": "write", "pull-requests": "read"}, requiredEnv: ["REPO"] },
   { name: "issue-triage-reminder", emoji: "🧭", type: "cron", port: 8118, accent: "#39c5cf",
-    desc: "Reminds maintainers about new issues that nobody has labeled or answered. Nothing slips through the cracks.", category: "Issues",
+    desc: "Reminds maintainers about new issues that nobody has labeled or answered. Nothing slips through the cracks.", category: "Issues", title: "Nothing slips through cracks",
     events: "none (scheduled)", perms: "issues: write",
     notes: ["GRACE_HOURS configures the grace period (default 24)", "Self-cleaning: label removed when a human triages"],
     ghEvents: ["schedule"], actionsPerms: {"issues": "write"}, requiredEnv: ["REPO"] },
   { name: "changelog-checker", emoji: "📋", type: "webhook", port: 8119, accent: "#3fb950",
-    desc: "Reminds authors to update the changelog when their pull request changes user-facing behavior. No more forgotten entries at release time.", category: "Pull requests",
+    desc: "Reminds authors to update the changelog when their pull request changes user-facing behavior. No more forgotten entries at release time.", category: "Pull requests", title: "Reminds you to update the changelog",
     events: "Pull requests", perms: "statuses: write, pulls: read",
     notes: ["CHANGELOG_FILE and SKIP_LABEL are configurable", "Re-evaluates when labels change"],
     ghEvents: ["pull_request"], actionsPerms: {"contents": "read", "pull-requests": "write"}, requiredEnv: [] },
   { name: "license-header-checker", emoji: "⚖️", type: "webhook", port: 8120, accent: "#58a6ff",
-    desc: "Checks that new source files carry the project's license header. Keeps you compliant without manual review.", category: "Pull requests",
+    desc: "Checks that new source files carry the project's license header. Keeps you compliant without manual review.", category: "Pull requests", title: "Checks license headers",
     events: "Pull requests", perms: "statuses: write, pulls: read, issues: write",
     notes: ["HEADER_TEXT and SOURCE_EXTENSIONS configurable", "Only checks newly added files, not existing ones"],
     ghEvents: ["pull_request"], actionsPerms: {"contents": "read", "pull-requests": "write"}, requiredEnv: [] },
   { name: "pr-path-labeler", emoji: "🗂", type: "webhook", port: 8121, accent: "#d29922",
-    desc: "Labels pull requests by which part of the codebase they touch — frontend, backend, docs — so you can filter work by area.", category: "Pull requests",
+    desc: "Labels pull requests by which part of the codebase they touch — frontend, backend, docs — so you can filter work by area.", category: "Pull requests", title: "Labels by codebase area",
     events: "Pull requests", perms: "pulls: read, issues: write",
     notes: ["Optional path-labels.json for explicit prefix→label mapping", "Never invents labels — only applies ones that already exist"],
     ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "read"}, requiredEnv: [] },
   { name: "contributor-milestones", emoji: "🏆", type: "webhook", port: 8122, accent: "#f85149",
-    desc: "Celebrates contributors when they hit milestones — first PR merged, tenth, fiftieth. Small celebrations keep people coming back.", category: "Community & planning",
+    desc: "Celebrates contributors when they hit milestones — first PR merged, tenth, fiftieth. Small celebrations keep people coming back.", category: "Community & planning", title: "Celebrates your contributors",
     events: "Pull requests (closed)", perms: "pulls: read, issues: write",
     notes: ["Recognition drives repeat contribution", "Bot accounts are ignored"],
     ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "read"}, requiredEnv: [] },
   { name: "breaking-change-guard", emoji: "💔", type: "webhook", port: 8123, accent: "#f85149",
-    desc: "Flags pull requests that look like they break existing behavior, so they get extra scrutiny before merging.", category: "Pull requests",
+    desc: "Flags pull requests that look like they break existing behavior, so they get extra scrutiny before merging.", category: "Pull requests", title: "Guards against breaking changes",
     events: "Pull requests", perms: "statuses: write, pulls: read, issues: write",
     notes: ["Detects feat!: titles and BREAKING CHANGE footers", "Re-checks on label changes so acknowledgment flips it green"],
     ghEvents: ["pull_request"], actionsPerms: {"contents": "read", "pull-requests": "write"}, requiredEnv: [] },
   { name: "release-reminder", emoji: "🚀", type: "cron", port: 8124, accent: "#3fb950",
-    desc: "Nags you when lots of unreleased work has piled up on the main branch. A gentle push to actually ship.", category: "Releases & CI",
+    desc: "Nags you when lots of unreleased work has piled up on the main branch. A gentle push to actually ship.", category: "Releases & CI", title: "Reminds you to ship",
     events: "none (scheduled)", perms: "contents: read, issues: write",
     notes: ["THRESHOLD_COMMITS sets the trigger (default 20)", "Updates one managed issue instead of spamming"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "read", "issues": "write"}, requiredEnv: ["REPO"] },
   { name: "docs-link-checker", emoji: "🔗", type: "cron", port: 8125, accent: "#39c5cf",
-    desc: "Checks links in your documentation and README, and reports the dead ones. Nothing embarrasses like a 404 in the getting-started guide.", category: "Repository hygiene",
+    desc: "Checks links in your documentation and README, and reports the dead ones. Nothing embarrasses like a 404 in the getting-started guide.", category: "Repository hygiene", title: "Finds dead doc links",
     events: "none (scheduled)", perms: "contents: read, issues: write",
     notes: ["Concurrent link checking with per-URL caching", "HEAD-then-GET fallback for picky servers"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "read", "issues": "write"}, requiredEnv: ["REPO"] },
   { name: "issue-link-checker", emoji: "🔍", type: "webhook", port: 8126, accent: "#a371f7",
-    desc: "Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.", category: "Issues",
+    desc: "Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.", category: "Issues", title: "Checks links in issues",
     events: "Issues", perms: "issues: write",
     notes: ["Skips github.com links to save rate quota", "Edits re-check, comment updates in place"],
     ghEvents: ["issues"], actionsPerms: {"issues": "write"}, requiredEnv: [] },
   { name: "issue-form-validator", emoji: "📝", type: "webhook", port: 8127, accent: "#e3b341",
-    desc: "Makes sure new issues follow your template — a bug report without steps to reproduce gets a friendly request to fill it in properly.", category: "Issues",
+    desc: "Makes sure new issues follow your template — a bug report without steps to reproduce gets a friendly request to fill it in properly.", category: "Issues", title: "Enforces the issue template",
     events: "Issues", perms: "issues: write",
     notes: ["REQUIRED_SECTIONS configures which headings must be filled", "Rejects placeholder content, not just empty sections"],
     ghEvents: ["issues"], actionsPerms: {"issues": "write"}, requiredEnv: [] },
   { name: "dependency-update-grouper", emoji: "📦", type: "webhook", port: 8128, accent: "#58a6ff",
-    desc: "Groups the flood of dependabot pull requests into batches so you review them once a week instead of every single day.", category: "Releases & CI",
+    desc: "Groups the flood of dependabot pull requests into batches so you review them once a week instead of every single day.", category: "Releases & CI", title: "Tames the dependabot flood",
     events: "Pull requests", perms: "pulls: read, issues: write",
     notes: ["Exactly one deps/* label per PR", "Pairs well with auto-merger: auto-merge deps/patch only"],
     ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "read"}, requiredEnv: [] },
   { name: "flaky-test-tracker", emoji: "🎲", type: "webhook", port: 8129, accent: "#d29922",
-    desc: "Notices when the same test fails intermittently across runs and files a tracking issue. Flaky tests stop being invisible.", category: "Releases & CI",
+    desc: "Notices when the same test fails intermittently across runs and files a tracking issue. Flaky tests stop being invisible.", category: "Releases & CI", title: "Hunts flaky tests",
     events: "Check runs", perms: "checks: read, issues: write",
     notes: ["FLAKE_THRESHOLD controls sensitivity (default 3)", "State persisted in flaky-state.json"],
     ghEvents: ["check_run"], actionsPerms: {"checks": "read", "issues": "write"}, requiredEnv: [] },
   { name: "merge-queue-assistant", emoji: "🚦", type: "webhook", port: 8130, accent: "#a371f7",
-    desc: "Shows which pull request is next in line to merge, labeling the queue so everyone knows the order.", category: "Pull requests",
+    desc: "Shows which pull request is next in line to merge, labeling the queue so everyone knows the order.", category: "Pull requests", title: "Shows who merges next",
     events: "Pull requests", perms: "pulls: read, issues: write",
     notes: ["Oldest queued PR is always the head", "Head merging or closing promotes the next in line automatically"],
     ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "discussion-triage-bot", emoji: "💬", type: "cron", port: 8131, accent: "#39c5cf",
-    desc: "Flags discussions that have been sitting unanswered. Questions from your community deserve replies.", category: "Community & planning",
+    desc: "Flags discussions that have been sitting unanswered. Questions from your community deserve replies.", category: "Community & planning", title: "Flags unanswered questions",
     events: "none (scheduled)", perms: "discussions: read, issues: write",
     notes: ["Uses the GraphQL API — discussions aren't in REST", "Verified live against github-bot-store itself"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "read", "issues": "write"}, requiredEnv: ["REPO"] },
   { name: "project-board-sync", emoji: "🗃", type: "webhook", port: 8132, accent: "#e3b341",
-    desc: "Keeps your GitHub project board in sync automatically — new issues and PRs land on the board, status follows the work.", category: "Community & planning",
+    desc: "Keeps your GitHub project board in sync automatically — new issues and PRs land on the board, status follows the work.", category: "Community & planning", title: "Keeps boards in sync",
     events: "Issues, pull requests", perms: "issues: read, pulls: read, projects: write",
     notes: ["Assigned work moves to In Progress, closed/merged to Done", "GraphQL-powered; degrades gracefully if the board has no Status field"],
     ghEvents: ["issues", "pull_request"], actionsPerms: {"issues": "read", "pull-requests": "read"}, requiredEnv: ["PROJECT_OWNER", "PROJECT_NUMBER"] },
@@ -676,6 +711,34 @@ for (const cat of CATEGORIES) {
   sectionEls[cat.id] = sec.querySelector(".grid");
 }
 
+
+// scroll-in: cards animate into view with a light stagger
+(function () {
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (en.isIntersecting) {
+        en.target.classList.add("in");
+        io.unobserve(en.target);
+      }
+    }
+  }, { threshold: 0.12, rootMargin: "0px 0px -24px 0px" });
+  window.__cardIO = io;
+})();
+
+// scrollspy: highlight the category you are reading
+(function () {
+  const links = [...document.querySelectorAll(".catnav a")];
+  const secs = [...document.querySelectorAll(".catsection")];
+  const spy = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (en.isIntersecting) {
+        links.forEach(l => l.classList.toggle("spot", l.getAttribute("href") === "#" + en.target.id));
+      }
+    }
+  }, { rootMargin: "-30% 0px -60% 0px" });
+  secs.forEach(sec => spy.observe(sec));
+})();
+
 function render() {
   let shown = 0;
   const q = query.toLowerCase();
@@ -697,8 +760,10 @@ function render() {
       card.innerHTML = `
         <div class="top">
           <div class="badge">${bot.emoji}</div>
-          <h4 class="botname">${bot.name}</h4>
-          <span class="port">:${bot.port}</span>
+          <div>
+            <h4 class="bottitle" style="font-size:1.02rem;font-weight:700;letter-spacing:-.2px">${bot.title || bot.name}</h4>
+            <div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);opacity:.8">${bot.name}</div>
+          </div>
         </div>
         <p>${bot.desc}</p>
         <div class="meta"><span class="tag ${bot.type}">${bot.type}</span><span class="tag" style="opacity:.65;font-size:.68rem">${bot.perms.split(",")[0]}</span></div>`;
@@ -713,10 +778,48 @@ function render() {
         }
       };
       grid.appendChild(card);
+      if (window.__cardIO) {
+        window.__cardIO.observe(card);
+      } else {
+        card.classList.add("in");
+      }
     }
     grid.closest(".catsection").classList.toggle("hidden", catShown === 0);
   }
   emptyMsg.classList.toggle("hidden", shown > 0);
+}
+
+
+const EVENT_WORDS = {
+  pull_request: "pull requests being opened or updated",
+  issues: "new issues being opened",
+  push: "code being pushed",
+  check_run: "CI checks finishing",
+  check_suite: "CI finishing",
+  schedule: "a daily timer",
+  issue_comment: "comments",
+  release: "releases being published",
+  discussion: "new discussions",
+  pull_request_review: "reviews being submitted",
+};
+const PERM_WORDS = {
+  issues: "label and comment on issues",
+  "pull-requests": "label, comment on and merge pull requests",
+  contents: "read your repository files",
+  checks: "read CI results",
+  statuses: "read commit statuses",
+  discussions: "read discussions",
+  actions: "read workflow runs",
+};
+function humanEvents(bot) {
+  const evs = bot.ghEvents || [];
+  if (!evs.length) return "a daily timer";
+  return evs.map(e => EVENT_WORDS[e] || e).join(", ");
+}
+function humanPerms(bot) {
+  const perms = bot.actionsPerms ? Object.keys(bot.actionsPerms) : [];
+  if (!perms.length) return "nothing special";
+  return perms.map(p => PERM_WORDS[p] || p).join(", ");
 }
 
 function openModal(bot) {
@@ -749,36 +852,55 @@ function openModal(bot) {
   const envList = (bot.requiredEnv || []).length
     ? bot.requiredEnv.map(e => `<code>${e}</code>`).join(" ")
     : '<span style="opacity:.7">nothing beyond GITHUB_TOKEN</span>';
+  const ezAction = `
+    <div class="ezsteps">
+      <div class="ezstep"><div class="ezn">1</div><p>Copy one small file into your repo<small>the config generator at the bottom of this page writes it for you — pick this bot, choose "github actions", paste it in as <code>.github/workflows/${bot.name}.yml</code></small></p></div>
+      <div class="ezstep"><div class="ezn">2</div><p>Push it to GitHub<small>GitHub picks it up automatically — nothing to install, no server, no cost</small></p></div>
+      <div class="ezstep"><div class="ezn">3</div><p>Done — it just works<small>the bot now watches your repo and does its job on its own</small></p></div>
+    </div>`;
   modalContent.innerHTML = `
     <div class="mhead">
-      <h2>${bot.emoji} ${bot.name}</h2>
-      <span class="typebadge ${bot.type}">${bot.type}</span>
+      <h2>${bot.emoji} ${bot.title || bot.name}</h2>
+      <span class="typebadge ${bot.type}">${bot.type === "cron" ? "runs daily" : "reacts live"}</span>
     </div>
-    <div class="mbody">
-      <aside class="mside">
-        <div class="meta"><b>Events</b>${evList}</div>
-        <div class="meta"><b>Permissions</b>${permList}</div>
-        <div class="meta"><b>Required env</b>${envList}</div>
-        <div class="meta"><b>Port</b><code>${bot.port}</code></div>
-        <div class="meta"><b>Links</b>
-          <a href="bots/${bot.name}.html">Detail page →</a><br>
-          <a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">Source &amp; README →</a>
-        </div>
-      </aside>
+    <div class="mbody" style="grid-template-columns:1fr">
       <div class="mmain">
-        <p class="desc">${bot.desc}</p>
+        <p style="font-family:var(--mono);font-size:.8rem;color:var(--muted);margin-bottom:14px">${bot.name}</p>
+        <p class="desc" style="font-size:1.05rem;line-height:1.65;color:var(--text)">${bot.desc}</p>
 
-        <h4>Download prebuilt binary</h4>
-        <div class="codewrap"><button class="mcopy" data-copy="install">copy</button><pre>${installCmd}</pre></div>
-        <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code>: verify before deploying.</li></ul>
+        <div class="facts">
+          <div class="fact">Watches for <b>${humanEvents(bot)}</b></div>
+          <div class="fact">Allowed to <b>${humanPerms(bot)}</b></div>
+          <div class="fact">Runs as <b>one tiny file, ~5MB</b></div>
+        </div>
 
-        <h4>Or build from source</h4>
-        <div class="codewrap"><button class="mcopy" data-copy="build">copy</button><pre>${buildCmd}</pre></div>
+        <h4 style="margin-top:26px">Start using it — no server needed</h4>
+        ${ezAction}
 
-        ${setupSection}
-
-        <h4>Notes</h4>
+        <h4>Good to know</h4>
         <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
+
+        <details class="tech">
+          <summary>Technical details — run it on your own server, exact permissions, webhook setup</summary>
+          <div class="techbody">
+            <h4>Download prebuilt binary</h4>
+            <div class="codewrap"><button class="mcopy" data-copy="install">copy</button><pre>${installCmd}</pre></div>
+            <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code>: verify before deploying.</li></ul>
+
+            <h4>Or build from source</h4>
+            <div class="codewrap"><button class="mcopy" data-copy="build">copy</button><pre>${buildCmd}</pre></div>
+
+            ${setupSection}
+
+            <h4>Exact permissions &amp; events</h4>
+            <ul>
+              <li>Events: ${(bot.ghEvents || []).map(e => `<code>${e}</code>`).join(" ") || "<code>schedule</code>"}</li>
+              <li>Permissions: ${bot.actionsPerms ? Object.entries(bot.actionsPerms).map(([k,v]) => `<code>${k}: ${v}</code>`).join(" ") : `<code>${bot.perms}</code>`}</li>
+              <li>Extra configuration: ${(bot.requiredEnv || []).length ? bot.requiredEnv.map(e => `<code>${e}</code>`).join(" ") : "nothing beyond GITHUB_TOKEN"}</li>
+              <li>Port: <code>${bot.port}</code> · <a href="bots/${bot.name}.html">detail page</a> · <a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">source &amp; README</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
     </div>`;
   const closeBtn = document.getElementById("close");

@@ -28,6 +28,7 @@ type bot struct {
 	Accent   string   `json:"accent"`
 	Desc     string   `json:"desc"`
 	Category string   `json:"category"`
+	Title    string   `json:"title"`
 	Events   string   `json:"events"`
 	Perms    string   `json:"perms"`
 	Notes    []string `json:"notes"`
@@ -48,7 +49,7 @@ func renderJS(bots []bot) string {
 			notes[i] = fmt.Sprintf("%q", n)
 		}
 		fmt.Fprintf(&sb, "  { name: %q, emoji: %q, type: %q, port: %d, accent: %q,\n", b.Name, b.Emoji, b.Type, b.Port, b.Accent)
-		fmt.Fprintf(&sb, "    desc: %q, category: %q,\n", b.Desc, b.Category)
+		fmt.Fprintf(&sb, "    desc: %q, category: %q, title: %q,\n", b.Desc, b.Category, b.Title)
 		fmt.Fprintf(&sb, "    events: %q, perms: %q,\n", b.Events, b.Perms)
 		fmt.Fprintf(&sb, "    notes: [%s],\n", strings.Join(notes, ", "))
 		evs := make([]string, len(b.GhEvents))

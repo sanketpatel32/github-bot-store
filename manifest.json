@@ -20,7 +20,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Sizes up pull requests"
   },
   {
     "name": "first-touch-welcomer",
@@ -44,7 +45,8 @@
       "pull-requests": "write"
     },
     "required_env": [],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Welcomes newcomers"
   },
   {
     "name": "stale-bot",
@@ -70,7 +72,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Closes forgotten issues"
   },
   {
     "name": "branch-sweeper",
@@ -94,7 +97,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Repository hygiene"
+    "category": "Repository hygiene",
+    "title": "Deletes dead branches"
   },
   {
     "name": "conventional-pr-check",
@@ -116,7 +120,8 @@
       "pull-requests": "read"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Keeps PR titles tidy"
   },
   {
     "name": "reviewer-assigner",
@@ -139,7 +144,8 @@
       "contents": "read"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Finds the right reviewers"
   },
   {
     "name": "duplicate-issue-hunter",
@@ -160,7 +166,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Spots duplicate reports"
   },
   {
     "name": "todo-tracker",
@@ -182,7 +189,8 @@
       "contents": "read"
     },
     "required_env": [],
-    "category": "Repository hygiene"
+    "category": "Repository hygiene",
+    "title": "Never forgets a TODO"
   },
   {
     "name": "merge-conflict-detector",
@@ -205,7 +213,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Warns about merge conflicts"
   },
   {
     "name": "auto-merger",
@@ -230,7 +239,8 @@
       "contents": "write"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Merges when everything passes"
   },
   {
     "name": "repo-digest",
@@ -254,7 +264,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Community & planning"
+    "category": "Community & planning",
+    "title": "Writes your weekly newspaper"
   },
   {
     "name": "pr-template-checker",
@@ -276,7 +287,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Makes people fill in the form"
   },
   {
     "name": "release-drafter",
@@ -299,7 +311,8 @@
       "pull-requests": "read"
     },
     "required_env": [],
-    "category": "Releases & CI"
+    "category": "Releases & CI",
+    "title": "Writes your release notes"
   },
   {
     "name": "keyword-issue-labeler",
@@ -321,7 +334,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Labels issues instantly"
   },
   {
     "name": "ci-failure-commenter",
@@ -344,7 +358,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Releases & CI"
+    "category": "Releases & CI",
+    "title": "Explains why CI failed"
   },
   {
     "name": "pr-aging-bot",
@@ -370,7 +385,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Flags abandoned pull requests"
   },
   {
     "name": "review-reminder",
@@ -395,7 +411,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Nags slow reviewers"
   },
   {
     "name": "issue-triage-reminder",
@@ -419,7 +436,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Nothing slips through cracks"
   },
   {
     "name": "changelog-checker",
@@ -442,7 +460,8 @@
       "contents": "read"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Reminds you to update the changelog"
   },
   {
     "name": "license-header-checker",
@@ -465,7 +484,8 @@
       "contents": "read"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Checks license headers"
   },
   {
     "name": "pr-path-labeler",
@@ -488,7 +508,8 @@
       "pull-requests": "read"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Labels by codebase area"
   },
   {
     "name": "contributor-milestones",
@@ -511,7 +532,8 @@
       "pull-requests": "read"
     },
     "required_env": [],
-    "category": "Community & planning"
+    "category": "Community & planning",
+    "title": "Celebrates your contributors"
   },
   {
     "name": "breaking-change-guard",
@@ -534,7 +556,8 @@
       "contents": "read"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Guards against breaking changes"
   },
   {
     "name": "release-reminder",
@@ -559,7 +582,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Releases & CI"
+    "category": "Releases & CI",
+    "title": "Reminds you to ship"
   },
   {
     "name": "docs-link-checker",
@@ -584,7 +608,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Repository hygiene"
+    "category": "Repository hygiene",
+    "title": "Finds dead doc links"
   },
   {
     "name": "issue-link-checker",
@@ -606,7 +631,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Checks links in issues"
   },
   {
     "name": "issue-form-validator",
@@ -628,7 +654,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Issues"
+    "category": "Issues",
+    "title": "Enforces the issue template"
   },
   {
     "name": "dependency-update-grouper",
@@ -651,7 +678,8 @@
       "pull-requests": "read"
     },
     "required_env": [],
-    "category": "Releases & CI"
+    "category": "Releases & CI",
+    "title": "Tames the dependabot flood"
   },
   {
     "name": "flaky-test-tracker",
@@ -674,7 +702,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Releases & CI"
+    "category": "Releases & CI",
+    "title": "Hunts flaky tests"
   },
   {
     "name": "merge-queue-assistant",
@@ -697,7 +726,8 @@
       "issues": "write"
     },
     "required_env": [],
-    "category": "Pull requests"
+    "category": "Pull requests",
+    "title": "Shows who merges next"
   },
   {
     "name": "discussion-triage-bot",
@@ -722,7 +752,8 @@
     "required_env": [
       "REPO"
     ],
-    "category": "Community & planning"
+    "category": "Community & planning",
+    "title": "Flags unanswered questions"
   },
   {
     "name": "project-board-sync",
@@ -749,6 +780,7 @@
       "PROJECT_OWNER",
       "PROJECT_NUMBER"
     ],
-    "category": "Community & planning"
+    "category": "Community & planning",
+    "title": "Keeps boards in sync"
   }
 ]
