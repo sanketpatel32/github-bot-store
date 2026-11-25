@@ -1,5 +1,6 @@
 // auto-merger — merges PRs labeled "automerge" once all checks pass.
-// Reacts to check_suite/check_run/status events and PR labeling.
+// Evaluates both modern check runs and legacy commit statuses, and only
+// merges the exact validated head SHA.
 package main
 
 import (
@@ -18,20 +19,18 @@ type genericEvent struct {
 	} `json:"repository"`
 	PR *struct {
 		Number int `json:"number"`
-		Labels []struct {
-			Name string `json:"name"`
-		} `json:"labels"`
 	} `json:"pull_request"`
 }
 
 type prInfo struct {
-	State  string `json:"state"`
+	State      string `json:"state"`
+	Mergeable  *bool  `json:"mergeable"`
+	Head       struct {
+		SHA string `json:"sha"`
+	} `json:"head"`
 	Labels []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
-	Head struct {
-		SHA string `json:"sha"`
-	} `json:"head"`
 }
 
 func fetchPR(client *ghbot.Client, repo string, number int) (*prInfo, error) {
@@ -58,7 +57,40 @@ func (p *prInfo) automergeable() bool {
 	return false
 }
 
+// checksGreen evaluates check runs (modern) plus the legacy combined status.
+// Anything still running or explicitly failing blocks the merge; success,
+// skipped and neutral conclusions pass. A sha with no checks at all counts
+// as green (repos without CI).
 func checksGreen(client *ghbot.Client, repo, sha string) bool {
+	// 1. check runs
+	runsBody, err := client.Do("GET",
+		fmt.Sprintf("/repos/%s/commits/%s/check-runs?per_page=100", repo, sha), nil)
+	if err != nil {
+		log.Printf("check-runs fetch: %v", err)
+		return false
+	}
+	var runs struct {
+		TotalCount int `json:"total_count"`
+		CheckRuns  []struct {
+			Status     string `json:"status"`
+			Conclusion string `json:"conclusion"`
+		} `json:"check_runs"`
+	}
+	if json.Unmarshal(runsBody, &runs) != nil {
+		return false
+	}
+	for _, r := range runs.CheckRuns {
+		if r.Status != "completed" {
+			return false // queued or in progress
+		}
+		switch r.Conclusion {
+		case "success", "skipped", "neutral":
+		default:
+			return false // failure, cancelled, timed_out, action_required
+		}
+	}
+
+	// 2. legacy commit statuses (some CI still only posts these)
 	statusBody, err := client.Do("GET",
 		fmt.Sprintf("/repos/%s/commits/%s/status", repo, sha), nil)
 	if err != nil {
@@ -69,26 +101,40 @@ func checksGreen(client *ghbot.Client, repo, sha string) bool {
 		TotalCount int    `json:"total_count"`
 	}
 	json.Unmarshal(statusBody, &status)
-	// no checks at all counts as green (repos without CI); failure/pending blocks
-	return status.State == "success" || status.TotalCount == 0
+	if status.TotalCount > 0 && status.State != "success" {
+		return false
+	}
+	return true
 }
 
 func tryMerge(client *ghbot.Client, repo string, number int) {
+	// re-read fresh state immediately before deciding — the event that woke
+	// us may be stale
 	pr, err := fetchPR(client, repo, number)
-	if err != nil || !pr.automergeable() {
+	if err != nil {
 		return
 	}
-	if !checksGreen(client, repo, pr.Head.SHA) {
+	if !pr.automergeable() {
+		return
+	}
+	if pr.Mergeable != nil && !*pr.Mergeable {
+		log.Printf("PR #%d: automerge set but not mergeable (conflicts?)", number)
+		return
+	}
+	headSHA := pr.Head.SHA
+	if !checksGreen(client, repo, headSHA) {
 		log.Printf("PR #%d: automerge set but checks not green yet", number)
 		return
 	}
+	// pin the merge to the exact head we validated — if the branch moved
+	// since, GitHub rejects the merge instead of merging unreviewed commits
 	_, err = client.Do("PUT", fmt.Sprintf("/repos/%s/pulls/%d/merge", repo, number),
-		map[string]string{"merge_method": "squash"})
+		map[string]string{"merge_method": "squash", "sha": headSHA})
 	if err != nil {
 		log.Printf("merge PR #%d: %v", number, err)
 		return
 	}
-	log.Printf("merged PR #%d", number)
+	log.Printf("merged PR #%d at %.10s", number, headSHA)
 }
 
 func main() {

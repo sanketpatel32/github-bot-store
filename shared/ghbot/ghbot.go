@@ -108,6 +108,12 @@ func NewClient(token string) *Client {
 	return &Client{Token: token, hc: &http.Client{Timeout: 20 * time.Second}}
 }
 
+// SetHTTPClient overrides the underlying HTTP client — used by tests to
+// redirect API calls to a local server.
+func (c *Client) SetHTTPClient(hc *http.Client) {
+	c.hc = hc
+}
+
 // Do performs an API call. path is relative, e.g. "/repos/owner/repo/issues/1/comments".
 // payload may be nil. Returns the response body.
 func (c *Client) Do(method, path string, payload any) ([]byte, error) {
