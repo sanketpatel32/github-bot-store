@@ -1,7 +1,7 @@
 [
   {
     "name": "pr-size-labeler",
-    "emoji": "\ud83d\udccf",
+    "emoji": "📏",
     "type": "webhook",
     "port": 8101,
     "accent": "#58a6ff",
@@ -11,11 +11,19 @@
     "notes": [
       "Creates the size/* labels automatically",
       "XL threshold is 800+ lines"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "first-touch-welcomer",
-    "emoji": "\ud83d\udc4b",
+    "emoji": "👋",
     "type": "webhook",
     "port": 8102,
     "accent": "#3fb950",
@@ -25,25 +33,45 @@
     "notes": [
       "Skips owners, members, and collaborators",
       "First-timer detection via the search API"
-    ]
+    ],
+    "gh_events": [
+      "issues",
+      "pull_request"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "pull-requests": "write"
+    },
+    "required_env": []
   },
   {
     "name": "stale-bot",
-    "emoji": "\ud83e\udd40",
+    "emoji": "🥀",
     "type": "cron",
     "port": 8103,
     "accent": "#d29922",
     "desc": "Marks issues idle 30 days as stale, closes them 7 days later. Any activity resets the clock.",
-    "events": "None \u2014 polls every 12h",
+    "events": "None — polls every 12h",
     "perms": "issues: write",
     "notes": [
       "Requires REPO=owner/name env var",
       "STALE_DAYS and CLOSE_AFTER_DAYS configurable"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "pull-requests": "write",
+      "contents": "read"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "branch-sweeper",
-    "emoji": "\ud83e\uddf9",
+    "emoji": "🧹",
     "type": "webhook",
     "port": 8104,
     "accent": "#39c5cf",
@@ -51,12 +79,22 @@
     "events": "Pull requests",
     "perms": "contents: write",
     "notes": [
-      "Never touches forks or protected branches (main, develop, release\u2026)"
+      "Never touches forks or protected branches (main, develop, release…)"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "contents": "write",
+      "pull-requests": "read"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "conventional-pr-check",
-    "emoji": "\u270d\ufe0f",
+    "emoji": "✍️",
     "type": "webhook",
     "port": 8105,
     "accent": "#a371f7",
@@ -65,25 +103,41 @@
     "perms": "statuses: write, pull-requests: write",
     "notes": [
       "Make it a required check in branch protection to block merges"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "statuses": "write",
+      "pull-requests": "read"
+    },
+    "required_env": []
   },
   {
     "name": "reviewer-assigner",
-    "emoji": "\ud83d\udc40",
+    "emoji": "👀",
     "type": "webhook",
     "port": 8106,
     "accent": "#58a6ff",
-    "desc": "Auto-assigns reviewers by which paths changed \u2014 a self-hosted mini-CODEOWNERS.",
+    "desc": "Auto-assigns reviewers by which paths changed — a self-hosted mini-CODEOWNERS.",
     "events": "Pull requests",
     "perms": "pull-requests: write",
     "notes": [
       "Configure path prefixes in reviewers.json",
       "Never assigns the PR author"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "contents": "read"
+    },
+    "required_env": []
   },
   {
     "name": "duplicate-issue-hunter",
-    "emoji": "\ud83d\udd0d",
+    "emoji": "🔍",
     "type": "webhook",
     "port": 8107,
     "accent": "#f85149",
@@ -91,12 +145,19 @@
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
-      "Only fires on 2+ keyword overlap \u2014 vague issues stay quiet"
-    ]
+      "Only fires on 2+ keyword overlap — vague issues stay quiet"
+    ],
+    "gh_events": [
+      "issues"
+    ],
+    "actions_perms": {
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "todo-tracker",
-    "emoji": "\ud83d\udcdd",
+    "emoji": "📝",
     "type": "webhook",
     "port": 8108,
     "accent": "#3fb950",
@@ -104,12 +165,20 @@
     "events": "Push",
     "perms": "issues: write, contents: read",
     "notes": [
-      "Dedupes by content hash \u2014 no duplicates from merges"
-    ]
+      "Dedupes by content hash — no duplicates from merges"
+    ],
+    "gh_events": [
+      "push"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "contents": "read"
+    },
+    "required_env": []
   },
   {
     "name": "merge-conflict-detector",
-    "emoji": "\u2694\ufe0f",
+    "emoji": "⚔️",
     "type": "webhook",
     "port": 8109,
     "accent": "#d29922",
@@ -117,12 +186,21 @@
     "events": "Push",
     "perms": "pull-requests: read, issues: write",
     "notes": [
-      "Retries once after 3s \u2014 GitHub computes mergeability async"
-    ]
+      "Retries once after 3s — GitHub computes mergeability async"
+    ],
+    "gh_events": [
+      "push",
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "auto-merger",
-    "emoji": "\ud83d\ude80",
+    "emoji": "🚀",
     "type": "webhook",
     "port": 8110,
     "accent": "#a371f7",
@@ -132,24 +210,44 @@
     "notes": [
       "Repos without CI count as green",
       "Create the automerge label first"
-    ]
+    ],
+    "gh_events": [
+      "pull_request",
+      "check_run"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "checks": "read",
+      "contents": "write"
+    },
+    "required_env": []
   },
   {
     "name": "repo-digest",
-    "emoji": "\ud83d\udcca",
+    "emoji": "📊",
     "type": "cron",
     "port": 8111,
     "accent": "#39c5cf",
     "desc": "Opens a weekly digest issue: merged PRs, issue stats, top contributors.",
-    "events": "None \u2014 runs every 7 days",
+    "events": "None — runs every 7 days",
     "perms": "issues: write",
     "notes": [
       "Requires REPO=owner/name env var"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "contents": "read"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "pr-template-checker",
-    "emoji": "\ud83d\udccb",
+    "emoji": "📋",
     "type": "webhook",
     "port": 8112,
     "accent": "#58a6ff",
@@ -158,151 +256,243 @@
     "perms": "issues: write",
     "notes": [
       "REQUIRED_SECTIONS env var, e.g. 'summary,test plan'"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "release-drafter",
-    "emoji": "\ud83c\udff7\ufe0f",
+    "emoji": "🏷️",
     "type": "webhook",
     "port": 8113,
     "accent": "#3fb950",
-    "desc": "Maintains a running draft release \u2014 every merged PR appends its title to the notes, grouped by type.",
+    "desc": "Maintains a running draft release — every merged PR appends its title to the notes, grouped by type.",
     "events": "Pull requests",
     "perms": "contents: write, pull-requests: read",
     "notes": [
       "Groups entries by conventional-commit prefix",
       "Publish the draft whenever you cut a release"
-    ]
+    ],
+    "gh_events": [
+      "push"
+    ],
+    "actions_perms": {
+      "contents": "write",
+      "pull-requests": "read"
+    },
+    "required_env": []
   },
   {
     "name": "keyword-issue-labeler",
-    "emoji": "\ud83c\udff7",
+    "emoji": "🏷",
     "type": "webhook",
     "port": 8114,
     "accent": "#f85149",
-    "desc": "Auto-labels new issues from keywords in the title and body \u2014 bug, feature, docs, question\u2026",
+    "desc": "Auto-labels new issues from keywords in the title and body — bug, feature, docs, question…",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
-      "Configurable keyword \u2192 label map in labels.json",
+      "Configurable keyword → label map in labels.json",
       "Ships with sensible defaults"
-    ]
+    ],
+    "gh_events": [
+      "issues"
+    ],
+    "actions_perms": {
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "ci-failure-commenter",
-    "emoji": "\ud83d\udca5",
+    "emoji": "💥",
     "type": "webhook",
     "port": 8115,
     "accent": "#d29922",
-    "desc": "When CI fails on a PR, comments which checks failed with links \u2014 no digging through the checks tab.",
+    "desc": "When CI fails on a PR, comments which checks failed with links — no digging through the checks tab.",
     "events": "Check runs, Check suites",
     "perms": "checks: read, issues: write",
     "notes": [
       "Collapses repeat failures into one updated comment"
-    ]
+    ],
+    "gh_events": [
+      "check_run"
+    ],
+    "actions_perms": {
+      "checks": "read",
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "pr-aging-bot",
-    "emoji": "\u23f3",
+    "emoji": "⏳",
     "type": "cron",
     "port": 8116,
     "accent": "#e3b341",
-    "desc": "Labels open PRs by wait time \u2014 fresh/week/stale/ancient \u2014 so review backlogs are visible at a glance.",
+    "desc": "Labels open PRs by wait time — fresh/week/stale/ancient — so review backlogs are visible at a glance.",
     "events": "none (scheduled)",
     "perms": "pulls: read, issues: write",
     "notes": [
       "Skips drafts by default (SKIP_DRAFTS=false to include)",
       "Only writes when a PR crosses a tier boundary",
       "Run nightly as a GitHub Action or crontab"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "issues": "write"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "review-reminder",
-    "emoji": "\ud83d\udd14",
+    "emoji": "🔔",
     "type": "cron",
     "port": 8117,
     "accent": "#a371f7",
-    "desc": "Nudges requested reviewers when a PR waits 24h+ without review \u2014 one reminder each, no spam.",
+    "desc": "Nudges requested reviewers when a PR waits 24h+ without review — one reminder each, no spam.",
     "events": "none (scheduled)",
     "perms": "pulls: read, issues: write",
     "notes": [
       "REMIND_AFTER_HOURS configures the wait (default 24)",
       "Tracks reminders via managed comment markers"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "pull-requests": "read",
+      "issues": "write"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "issue-triage-reminder",
-    "emoji": "\ud83e\udded",
+    "emoji": "🧭",
     "type": "cron",
     "port": 8118,
     "accent": "#39c5cf",
-    "desc": "Flags issues that sit untriaged \u2014 no label, assignee, or milestone \u2014 with a needs-triage label that clears itself once triaged.",
+    "desc": "Flags issues that sit untriaged — no label, assignee, or milestone — with a needs-triage label that clears itself once triaged.",
     "events": "none (scheduled)",
     "perms": "issues: write",
     "notes": [
       "GRACE_HOURS configures the grace period (default 24)",
       "Self-cleaning: label removed when a human triages"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "issues": "write"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "changelog-checker",
-    "emoji": "\ud83d\udccb",
+    "emoji": "📋",
     "type": "webhook",
     "port": 8119,
     "accent": "#3fb950",
-    "desc": "Commit status enforcing every PR updates the changelog \u2014 or explicitly opts out with a skip label.",
+    "desc": "Commit status enforcing every PR updates the changelog — or explicitly opts out with a skip label.",
     "events": "Pull requests",
     "perms": "statuses: write, pulls: read",
     "notes": [
       "CHANGELOG_FILE and SKIP_LABEL are configurable",
       "Re-evaluates when labels change"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "contents": "read"
+    },
+    "required_env": []
   },
   {
     "name": "license-header-checker",
-    "emoji": "\u2696\ufe0f",
+    "emoji": "⚖️",
     "type": "webhook",
     "port": 8120,
     "accent": "#58a6ff",
-    "desc": "Fails PRs whose new source files lack a license header \u2014 one managed comment lists exactly which files.",
+    "desc": "Fails PRs whose new source files lack a license header — one managed comment lists exactly which files.",
     "events": "Pull requests",
     "perms": "statuses: write, pulls: read, issues: write",
     "notes": [
       "HEADER_TEXT and SOURCE_EXTENSIONS configurable",
       "Only checks newly added files, not existing ones"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "contents": "read"
+    },
+    "required_env": []
   },
   {
     "name": "pr-path-labeler",
-    "emoji": "\ud83d\uddc2",
+    "emoji": "🗂",
     "type": "webhook",
     "port": 8121,
     "accent": "#d29922",
-    "desc": "Labels PRs by which directories they touch \u2014 area/frontend, area/backend \u2014 using your repo's existing labels.",
+    "desc": "Labels PRs by which directories they touch — area/frontend, area/backend — using your repo's existing labels.",
     "events": "Pull requests",
     "perms": "pulls: read, issues: write",
     "notes": [
-      "Optional path-labels.json for explicit prefix\u2192label mapping",
-      "Never invents labels \u2014 only applies ones that already exist"
-    ]
+      "Optional path-labels.json for explicit prefix→label mapping",
+      "Never invents labels — only applies ones that already exist"
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "pull-requests": "read"
+    },
+    "required_env": []
   },
   {
     "name": "contributor-milestones",
-    "emoji": "\ud83c\udfc6",
+    "emoji": "🏆",
     "type": "webhook",
     "port": 8122,
     "accent": "#f85149",
-    "desc": "Celebrates contributors \u2014 welcome comment on first merged PR, shout-outs at 5/10/25/50/100 merges.",
+    "desc": "Celebrates contributors — welcome comment on first merged PR, shout-outs at 5/10/25/50/100 merges.",
     "events": "Pull requests (closed)",
     "perms": "pulls: read, issues: write",
     "notes": [
       "Recognition drives repeat contribution",
       "Bot accounts are ignored"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "pull-requests": "read"
+    },
+    "required_env": []
   },
   {
     "name": "breaking-change-guard",
-    "emoji": "\ud83d\udc94",
+    "emoji": "💔",
     "type": "webhook",
     "port": 8123,
     "accent": "#f85149",
@@ -312,132 +502,220 @@
     "notes": [
       "Detects feat!: titles and BREAKING CHANGE footers",
       "Re-checks on label changes so acknowledgment flips it green"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "contents": "read"
+    },
+    "required_env": []
   },
   {
     "name": "release-reminder",
-    "emoji": "\ud83d\ude80",
+    "emoji": "🚀",
     "type": "cron",
     "port": 8124,
     "accent": "#3fb950",
-    "desc": "Opens a tracking issue when unreleased commits pile up \u2014 closes itself once you ship.",
+    "desc": "Opens a tracking issue when unreleased commits pile up — closes itself once you ship.",
     "events": "none (scheduled)",
     "perms": "contents: read, issues: write",
     "notes": [
       "THRESHOLD_COMMITS sets the trigger (default 20)",
       "Updates one managed issue instead of spamming"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "contents": "read",
+      "issues": "write"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "docs-link-checker",
-    "emoji": "\ud83d\udd17",
+    "emoji": "🔗",
     "type": "cron",
     "port": 8125,
     "accent": "#39c5cf",
-    "desc": "Scans your markdown for dead links \u2014 one self-updating issue lists them, closes itself when fixed.",
+    "desc": "Scans your markdown for dead links — one self-updating issue lists them, closes itself when fixed.",
     "events": "none (scheduled)",
     "perms": "contents: read, issues: write",
     "notes": [
       "Concurrent link checking with per-URL caching",
       "HEAD-then-GET fallback for picky servers"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "contents": "read",
+      "issues": "write"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "issue-link-checker",
-    "emoji": "\ud83d\udd0d",
+    "emoji": "🔍",
     "type": "webhook",
     "port": 8126,
     "accent": "#a371f7",
-    "desc": "Validates external links in new issues \u2014 one comment flags dead repro links before triage wastes time on them.",
+    "desc": "Validates external links in new issues — one comment flags dead repro links before triage wastes time on them.",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
       "Skips github.com links to save rate quota",
       "Edits re-check, comment updates in place"
-    ]
+    ],
+    "gh_events": [
+      "issues"
+    ],
+    "actions_perms": {
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "issue-form-validator",
-    "emoji": "\ud83d\udcdd",
+    "emoji": "📝",
     "type": "webhook",
     "port": 8127,
     "accent": "#e3b341",
-    "desc": "Enforces your issue template \u2014 labels issues missing required sections, auto-clears when they fix it.",
+    "desc": "Enforces your issue template — labels issues missing required sections, auto-clears when they fix it.",
     "events": "Issues",
     "perms": "issues: write",
     "notes": [
       "REQUIRED_SECTIONS configures which headings must be filled",
       "Rejects placeholder content, not just empty sections"
-    ]
+    ],
+    "gh_events": [
+      "issues"
+    ],
+    "actions_perms": {
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "dependency-update-grouper",
-    "emoji": "\ud83d\udce6",
+    "emoji": "📦",
     "type": "webhook",
     "port": 8128,
     "accent": "#58a6ff",
-    "desc": "Labels dependabot/renovate PRs patch/minor/major from semver in the title \u2014 batch the safe ones, review the rest.",
+    "desc": "Labels dependabot/renovate PRs patch/minor/major from semver in the title — batch the safe ones, review the rest.",
     "events": "Pull requests",
     "perms": "pulls: read, issues: write",
     "notes": [
       "Exactly one deps/* label per PR",
       "Pairs well with auto-merger: auto-merge deps/patch only"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "pull-requests": "read"
+    },
+    "required_env": []
   },
   {
     "name": "flaky-test-tracker",
-    "emoji": "\ud83c\udfb2",
+    "emoji": "🎲",
     "type": "webhook",
     "port": 8129,
     "accent": "#d29922",
-    "desc": "Catches flaky CI \u2014 checks that pass on retry with zero code changes \u2014 and files tracking issues.",
+    "desc": "Catches flaky CI — checks that pass on retry with zero code changes — and files tracking issues.",
     "events": "Check runs",
     "perms": "checks: read, issues: write",
     "notes": [
       "FLAKE_THRESHOLD controls sensitivity (default 3)",
       "State persisted in flaky-state.json"
-    ]
+    ],
+    "gh_events": [
+      "check_run"
+    ],
+    "actions_perms": {
+      "checks": "read",
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "merge-queue-assistant",
-    "emoji": "\ud83d\udea6",
+    "emoji": "🚦",
     "type": "webhook",
     "port": 8130,
     "accent": "#a371f7",
-    "desc": "A minimal merge queue \u2014 label PRs queue/merge and the bot enforces FIFO order with queue/next promotion.",
+    "desc": "A minimal merge queue — label PRs queue/merge and the bot enforces FIFO order with queue/next promotion.",
     "events": "Pull requests",
     "perms": "pulls: read, issues: write",
     "notes": [
       "Oldest queued PR is always the head",
       "Head merging or closing promotes the next in line automatically"
-    ]
+    ],
+    "gh_events": [
+      "pull_request"
+    ],
+    "actions_perms": {
+      "pull-requests": "write",
+      "issues": "write"
+    },
+    "required_env": []
   },
   {
     "name": "discussion-triage-bot",
-    "emoji": "\ud83d\udcac",
+    "emoji": "💬",
     "type": "cron",
     "port": 8131,
     "accent": "#39c5cf",
-    "desc": "Keeps discussions from rotting \u2014 one self-updating issue lists questions nobody has answered.",
+    "desc": "Keeps discussions from rotting — one self-updating issue lists questions nobody has answered.",
     "events": "none (scheduled)",
     "perms": "discussions: read, issues: write",
     "notes": [
-      "Uses the GraphQL API \u2014 discussions aren't in REST",
+      "Uses the GraphQL API — discussions aren't in REST",
       "Verified live against github-bot-store itself"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "issues": "write",
+      "contents": "read"
+    },
+    "required_env": [
+      "REPO"
     ]
   },
   {
     "name": "project-board-sync",
-    "emoji": "\ud83d\uddc3",
+    "emoji": "🗃",
     "type": "webhook",
     "port": 8132,
     "accent": "#e3b341",
-    "desc": "Keeps Projects v2 boards honest \u2014 new issues/PRs appear automatically, cards move as work progresses.",
+    "desc": "Keeps Projects v2 boards honest — new issues/PRs appear automatically, cards move as work progresses.",
     "events": "Issues, pull requests",
     "perms": "issues: read, pulls: read, projects: write",
     "notes": [
       "Assigned work moves to In Progress, closed/merged to Done",
       "GraphQL-powered; degrades gracefully if the board has no Status field"
+    ],
+    "gh_events": [
+      "issues",
+      "pull_request"
+    ],
+    "actions_perms": {
+      "issues": "read",
+      "pull-requests": "read"
+    },
+    "required_env": [
+      "PROJECT_OWNER",
+      "PROJECT_NUMBER"
     ]
   }
 ]

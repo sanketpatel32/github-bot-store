@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -29,6 +30,13 @@ type bot struct {
 	Events string   `json:"events"`
 	Perms  string   `json:"perms"`
 	Notes  []string `json:"notes"`
+	// machine-readable generation metadata (#113): the exact GitHub event
+	// names the bot consumes, minimal Actions permissions, and required
+	// settings beyond GITHUB_TOKEN — the catalog generator emits correct,
+	// complete workflows from these instead of guessing from prose.
+	GhEvents     []string          `json:"gh_events"`
+	ActionsPerms map[string]string `json:"actions_perms"`
+	RequiredEnv  []string          `json:"required_env"`
 }
 
 func renderJS(bots []bot) string {
@@ -41,7 +49,22 @@ func renderJS(bots []bot) string {
 		fmt.Fprintf(&sb, "  { name: %q, emoji: %q, type: %q, port: %d, accent: %q,\n", b.Name, b.Emoji, b.Type, b.Port, b.Accent)
 		fmt.Fprintf(&sb, "    desc: %q,\n", b.Desc)
 		fmt.Fprintf(&sb, "    events: %q, perms: %q,\n", b.Events, b.Perms)
-		fmt.Fprintf(&sb, "    notes: [%s] },\n", strings.Join(notes, ", "))
+		fmt.Fprintf(&sb, "    notes: [%s],\n", strings.Join(notes, ", "))
+		evs := make([]string, len(b.GhEvents))
+		for i, e := range b.GhEvents {
+			evs[i] = fmt.Sprintf("%q", e)
+		}
+		var permPairs []string
+		for k, v := range b.ActionsPerms {
+			permPairs = append(permPairs, fmt.Sprintf("%q: %q", k, v))
+		}
+		sort.Strings(permPairs)
+		envs := make([]string, len(b.RequiredEnv))
+		for i, e := range b.RequiredEnv {
+			envs[i] = fmt.Sprintf("%q", e)
+		}
+		fmt.Fprintf(&sb, "    ghEvents: [%s], actionsPerms: {%s}, requiredEnv: [%s] },\n",
+			strings.Join(evs, ", "), strings.Join(permPairs, ", "), strings.Join(envs, ", "))
 	}
 	return sb.String()
 }
