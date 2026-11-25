@@ -27,6 +27,7 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [review-reminder](bots/review-reminder) | Nudges reviewers when PRs wait too long | cron |
 | [issue-triage-reminder](bots/issue-triage-reminder) | Flags untriaged issues with a self-clearing label | cron |
 | [changelog-checker](bots/changelog-checker) | Commit status enforcing changelog updates | webhook |
+| [license-header-checker](bots/license-header-checker) | Enforces license headers on new files | webhook |
 
 ## Automations
 

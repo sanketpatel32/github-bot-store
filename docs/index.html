@@ -396,6 +396,10 @@ const BOTS = [
     desc: "Commit status enforcing every PR updates the changelog — or explicitly opts out with a skip label.",
     events: "Pull requests", perms: "statuses: write, pulls: read",
     notes: ["CHANGELOG_FILE and SKIP_LABEL are configurable", "Re-evaluates when labels change"] },
+  { name: "license-header-checker", emoji: "⚖️", type: "webhook", port: 8120, accent: "#58a6ff",
+    desc: "Fails PRs whose new source files lack a license header — one managed comment lists exactly which files.",
+    events: "Pull requests", perms: "statuses: write, pulls: read, issues: write",
+    notes: ["HEADER_TEXT and SOURCE_EXTENSIONS configurable", "Only checks newly added files, not existing ones"] },
 ];
 
 const grid = document.getElementById("grid");
