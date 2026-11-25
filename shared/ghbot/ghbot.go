@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -319,6 +320,30 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 	log.Fatal(newServer(cfg.Port, mux).ListenAndServe())
 }
 
+// APIError carries the method, path, status code and response body of a
+// failed GitHub API call, so callers can branch on the status instead of
+// parsing strings (#16).
+type APIError struct {
+	Method string
+	Path   string
+	Status int
+	Body   string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("github %s %s: %d: %.200s", e.Method, e.Path, e.Status, e.Body)
+}
+
+// IsNotFound reports whether err is a GitHub 404 — the common "resource
+// gone, skip silently" case.
+func IsNotFound(err error) bool {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.Status == 404
+	}
+	return false
+}
+
 // Client is a minimal authenticated GitHub REST client.
 type Client struct {
 	Token string
@@ -388,7 +413,7 @@ func (c *Client) Do(method, path string, payload any) ([]byte, error) {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
-		return body, fmt.Errorf("github %s %s: %d: %.200s", method, path, resp.StatusCode, body)
+		return body, &APIError{Method: method, Path: path, Status: resp.StatusCode, Body: string(body)}
 	}
 	return body, nil
 }
