@@ -927,9 +927,37 @@ func (c *Client) GraphQL(query string, variables map[string]any) (json.RawMessag
 	req.Header.Set("Authorization", "Bearer "+c.authToken())
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.hc.Do(req)
-	if err != nil {
-		return nil, err
+	// same retry/rate-limit policy as the REST path (#131). Queries are
+	// idempotent so network errors retry freely; mutations retry only on
+	// definitive server responses, never on network uncertainty — mirroring
+	// the REST write policy.
+	isMutation := strings.HasPrefix(strings.TrimSpace(query), "mutation")
+	var resp *http.Response
+	for attempt := 0; attempt < 4; attempt++ {
+		resp, err = c.hc.Do(req)
+		if err != nil {
+			if attempt == 3 || isMutation {
+				return nil, err
+			}
+			time.Sleep(jitterBackoff(attempt))
+			continue
+		}
+		if resp.StatusCode == 502 || resp.StatusCode == 503 || resp.StatusCode == 429 ||
+			(resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0") {
+			wait := jitterBackoff(attempt)
+			if rs := resp.Header.Get("Retry-After"); rs != "" {
+				if secs, cerr := strconv.Atoi(rs); cerr == nil {
+					wait = time.Duration(secs) * time.Second
+				}
+			}
+			resp.Body.Close()
+			if attempt == 3 {
+				return nil, fmt.Errorf("graphql: %d after retries", resp.StatusCode)
+			}
+			time.Sleep(wait)
+			continue
+		}
+		break
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
@@ -959,30 +987,22 @@ func (c *Client) GetAll(path string) ([]json.RawMessage, error) {
 		sep = "&"
 	}
 	var all []json.RawMessage
-	next := path + sep + "per_page=100"
-	for next != "" {
-		req, err := http.NewRequest("GET", apiBase()+next, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Authorization", "Bearer "+c.authToken())
-		req.Header.Set("Accept", "application/vnd.github+json")
-		resp, err := c.hc.Do(req)
+	// page-based iteration through Do — every page gets the shared retry and
+	// rate-limit policy. The previous implementation drove raw http requests
+	// that failed permanently on the first 429/5xx (#131).
+	for page := 1; ; page++ {
+		body, err := c.Do("GET", fmt.Sprintf("%s%sper_page=100&page=%d", path, sep, page), nil)
 		if err != nil {
 			return all, err
 		}
-		body, _ := io.ReadAll(resp.Body)
-		link := resp.Header.Get("Link")
-		resp.Body.Close()
-		if resp.StatusCode >= 300 {
-			return all, fmt.Errorf("github GET %s: %d", next, resp.StatusCode)
+		var chunk []json.RawMessage
+		if err := json.Unmarshal(body, &chunk); err != nil {
+			return all, fmt.Errorf("github GET %s page %d: not a JSON array", path, page)
 		}
-		var page []json.RawMessage
-		if err := json.Unmarshal(body, &page); err != nil {
-			return all, err
+		all = append(all, chunk...)
+		if len(chunk) < 100 {
+			break
 		}
-		all = append(all, page...)
-		next = nextLink(link)
 	}
 	return all, nil
 }
