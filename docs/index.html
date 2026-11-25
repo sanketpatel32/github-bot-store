@@ -463,6 +463,10 @@ const BOTS = [
     desc: "Catches flaky CI — checks that pass on retry with zero code changes — and files tracking issues.",
     events: "Check runs", perms: "checks: read, issues: write",
     notes: ["FLAKE_THRESHOLD controls sensitivity (default 3)", "State persisted in flaky-state.json"] },
+  { name: "merge-queue-assistant", emoji: "🚦", type: "webhook", port: 8130, accent: "#a371f7",
+    desc: "A minimal merge queue — label PRs queue/merge and the bot enforces FIFO order with queue/next promotion.",
+    events: "Pull requests", perms: "pulls: read, issues: write",
+    notes: ["Oldest queued PR is always the head", "Head merging or closing promotes the next in line automatically"] },
 
 ];
 

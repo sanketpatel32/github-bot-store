@@ -397,5 +397,19 @@
       "FLAKE_THRESHOLD controls sensitivity (default 3)",
       "State persisted in flaky-state.json"
     ]
+  },
+  {
+    "name": "merge-queue-assistant",
+    "emoji": "\ud83d\udea6",
+    "type": "webhook",
+    "port": 8130,
+    "accent": "#a371f7",
+    "desc": "A minimal merge queue \u2014 label PRs queue/merge and the bot enforces FIFO order with queue/next promotion.",
+    "events": "Pull requests",
+    "perms": "pulls: read, issues: write",
+    "notes": [
+      "Oldest queued PR is always the head",
+      "Head merging or closing promotes the next in line automatically"
+    ]
   }
 ]
