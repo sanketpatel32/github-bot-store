@@ -1,0 +1,52 @@
+# Compose profile example — every bot as a tiny service sharing one network.
+# Tokens come from a .env file next to this one (see .env.example).
+version: "3.8"
+
+services:
+  pr-size-labeler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args: { BOT: pr-size-labeler }
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      PORT: "8101"
+      ALLOWED_REPOS: ${ALLOWED_REPOS:-}
+      SPOOL_DIR: /spool
+    volumes:
+      - spool-size:/spool
+    ports: ["8101:8101"]
+    restart: unless-stopped
+
+  stale-bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args: { BOT: stale-bot }
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      REPO: ${REPO}
+      PORT: "8103"
+    ports: ["8103:8103"]
+    restart: unless-stopped
+
+  auto-merger:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args: { BOT: auto-merger }
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      PORT: "8110"
+      MERGE_METHOD: squash
+      SPOOL_DIR: /spool
+    volumes:
+      - spool-merge:/spool
+    ports: ["8110:8110"]
+    restart: unless-stopped
+
+volumes:
+  spool-size:
+  spool-merge:
