@@ -129,7 +129,7 @@
     "type": "webhook",
     "port": 8106,
     "accent": "#58a6ff",
-    "desc": "Looks at which files a pull request touches and assigns the right reviewers automatically \u2014 your own mini-CODEOWNERS, no GitHub Team plan needed.",
+    "desc": "Checks which files a pull request changes and asks the right people to review the code.",
     "events": "Pull requests",
     "perms": "pull-requests: write",
     "notes": [

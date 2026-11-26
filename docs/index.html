@@ -9,7 +9,7 @@
 <meta name="page-type" content="software">
 <meta name="theme-color" content="#f4f7fc">
 <title>GitHub Bot Store — tiny self-hosted automation</title>
-<link rel="stylesheet" href="site.css?v=workbench">
+<link rel="stylesheet" href="site.css?v=agent-setup">
 </head>
 <body>
 <nav class="site-nav" aria-label="Site navigation">
@@ -31,7 +31,7 @@
       <p class="landing-summary" data-enter>A bot is a small program that does a job for you. Let it label bug reports, remind people to review code, or write release notes.</p>
       <div class="cta-row" data-enter>
         <a class="btn landing-primary" href="#gallery">Find a bot <span aria-hidden="true">↓</span></a>
-        <a class="btn landing-secondary" href="#how">How to run a bot <span aria-hidden="true">↗</span></a>
+        <a class="btn landing-secondary" href="#how">How to run a bot <span aria-hidden="true">↓</span></a>
       </div>
       <p class="landing-kicker" data-enter><strong id="botcount">32</strong> bots · Open source · Run in GitHub or on your own server</p>
     </div>
@@ -61,7 +61,7 @@
   <section class="catalog" id="gallery" aria-labelledby="catalog-title">
     <header class="browse-head">
       <h2 class="section" id="catalog-title">Find the right bot</h2>
-      <p class="sub">Search for a bot by name or by what you want it to do.</p>
+      <p class="sub">Search by name or job. Every bot can run in GitHub Actions.</p>
     </header>
     <div class="catalog-layout">
       <div class="controls" role="search" aria-label="Bot catalog">
@@ -69,16 +69,22 @@
           <svg aria-hidden="true" width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
             <circle cx="8.5" cy="8.5" r="5.25"/><path d="m12.5 12.5 4 4"/>
           </svg>
-          <input id="search" type="search" aria-label="Search bots" placeholder="Search by name or task">
+          <input id="search" type="search" aria-label="Search bots" placeholder="Search bots">
         </label>
-        <select id="permfilter" aria-label="Filter by permission">
-          <option value="">Any GitHub permission</option>
-          <option value="issues: write">Issues · Write</option>
-          <option value="pull-requests: read">Pull requests · Read</option>
-          <option value="statuses: write">Statuses · Write</option>
-          <option value="checks: read">Checks · Read</option>
-          <option value="contents">Contents · Any access</option>
-        </select>
+        <details class="permission-options" id="permission-options">
+          <summary class="btn">More filters <span id="active-filter" hidden>1</span><span class="filter-arrow" aria-hidden="true">⌄</span></summary>
+          <div class="permission-choice">
+            <label for="permfilter">GitHub access</label>
+            <select id="permfilter">
+              <option value="">Any access</option>
+              <option value="issues: write">Edit issues</option>
+              <option value="pull-requests: read">Read pull requests</option>
+              <option value="statuses: write">Update statuses</option>
+              <option value="checks: read">Read check results</option>
+              <option value="contents">Access project files</option>
+            </select>
+          </div>
+        </details>
       </div>
       <div class="catalog-rail" hidden>
         <h3 id="category-title">Bot jobs</h3>
@@ -166,7 +172,7 @@ const BOTS = [
     notes: ["Make it a required check in branch protection to block merges"],
     ghEvents: ["pull_request"], actionsPerms: {"pull-requests": "read", "statuses": "write"}, requiredEnv: [] },
   { name: "reviewer-assigner", emoji: "👀", type: "webhook", port: 8106, accent: "#58a6ff",
-    desc: "Looks at which files a pull request touches and assigns the right reviewers automatically — your own mini-CODEOWNERS, no GitHub Team plan needed.", category: "Pull requests", title: "Finds the right reviewers",
+    desc: "Checks which files a pull request changes and asks the right people to review the code.", category: "Pull requests", title: "Finds the right reviewers",
     events: "Pull requests", perms: "pull-requests: write",
     notes: ["Configure path prefixes in reviewers.json", "Never assigns the PR author"],
     ghEvents: ["pull_request"], actionsPerms: {"contents": "read", "pull-requests": "write"}, requiredEnv: [] },
@@ -306,9 +312,9 @@ const BOTS = [
 // ---------- gallery ----------
 const CATEGORIES = [
   { id: "Pull requests", blurb: "Label changes, assign reviewers, and keep merges moving." },
-  { id: "Issues", blurb: "Triage reports, find duplicates, and welcome contributors." },
-  { id: "Releases & CI", blurb: "Draft release notes and make CI failures easier to follow." },
-  { id: "Repository hygiene", blurb: "Clean up merged branches, track TODOs, and check links." },
+  { id: "Issues", label: "Bug reports and requests", blurb: "Sort reports, find duplicates, and welcome new people." },
+  { id: "Releases & CI", label: "Releases and code checks", blurb: "Write release notes and explain why code checks failed." },
+  { id: "Repository hygiene", label: "Project cleanup", blurb: "Clean up old branches, track unfinished work, and check links." },
   { id: "Community & planning", blurb: "Send digests, recognize contributors, and sync project boards." },
 ];
 
@@ -320,6 +326,8 @@ const emptyMsg = document.getElementById("empty");
 const resultCount = document.getElementById("result-count");
 const search = document.getElementById("search");
 const permission = document.getElementById("permfilter");
+const permissionOptions = document.getElementById("permission-options");
+const activeFilter = document.getElementById("active-filter");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 document.getElementById("botcount").textContent = BOTS.length;
 
@@ -350,9 +358,10 @@ if (!("closedBy" in HTMLDialogElement.prototype)) {
 
 const groups = CATEGORIES.map(cat => {
   const id = "cat-" + cat.id.replace(/[^a-z]/gi, "").toLowerCase();
+  const label = cat.label || cat.id;
   const link = document.createElement("a");
   link.href = "#" + id;
-  link.innerHTML = `${cat.id} <span class="count"></span>`;
+  link.innerHTML = `${label} <span class="count"></span>`;
   catnav.appendChild(link);
 
   const section = document.createElement("section");
@@ -360,7 +369,7 @@ const groups = CATEGORIES.map(cat => {
   section.id = id;
   section.innerHTML = `
     <div class="cathead">
-      <h3 class="cat-title">${cat.id}</h3>
+      <h3 class="cat-title">${label}</h3>
       <span class="cat-count"></span>
     </div>
     <p class="cat-blurb">${cat.blurb}</p>
@@ -371,6 +380,7 @@ const groups = CATEGORIES.map(cat => {
   const grid = section.querySelector(".grid");
   const cards = bots.map(bot => {
     const card = document.createElement("article");
+    const needsSettings = bot.requiredEnv.some(key => key !== "REPO");
     card.className = "card";
     card.style.setProperty("--card-accent", bot.accent);
     card.innerHTML = `
@@ -383,8 +393,8 @@ const groups = CATEGORIES.map(cat => {
       </div>
       <p class="description">${bot.desc}</p>
       <div class="meta">
-        <span class="tag ${bot.type}">${bot.type === "cron" ? "On a schedule" : "On GitHub events"}</span>
-        <button class="card-action" type="button" aria-haspopup="dialog" aria-label="View and set up: ${bot.name}">View and set up <span aria-hidden="true">↗</span></button>
+        <span class="tag ${needsSettings ? "extra-settings" : ""}">${needsSettings ? "Extra settings needed" : "No extra workflow inputs"}</span>
+        <button class="card-action" type="button" aria-haspopup="dialog" aria-label="View setup: ${bot.name}">View setup <span aria-hidden="true">›</span></button>
       </div>`;
     card.querySelector("button").onclick = () => openModal(bot);
     grid.appendChild(card);
@@ -406,6 +416,7 @@ markCategory();
 function render() {
   const q = search.value.trim().toLowerCase();
   const perm = permission.value;
+  activeFilter.hidden = !perm;
   let shown = 0;
   for (const { section, link, cards, headingCount, linkCount } of groups) {
     let count = 0;
@@ -429,6 +440,7 @@ search.addEventListener("input", render);
 permission.addEventListener("change", render);
 document.getElementById("clear-filters").onclick = () => {
   search.value = permission.value = "";
+  permissionOptions.open = false;
   render();
   search.focus();
 };
@@ -505,25 +517,35 @@ function openModal(bot) {
       <form method="dialog"><button id="close" class="btn" aria-label="Close bot details" autofocus>×</button></form>
     </div>
     <div class="mmain">
-      <p class="desc">${bot.desc}</p>
-      <div class="facts">
-        <p class="fact">Watches for <b>${humanEvents(bot)}</b></p>
-        <p class="fact">Workflow permissions <b>${permList || "none required"}</b></p>
-      </div>
-
-      <h2>Run with GitHub Actions</h2>
-      <ol class="ezsteps">
-        <li>Generate a workflow for this bot and save it as <code>.github/workflows/${bot.name}.yml</code>.</li>
-        <li>Push the workflow to your repository to let GitHub run the bot.</li>
-      </ol>
-      <a class="btn primary" id="configure-bot" href="#generator">Create setup file <span aria-hidden="true">↗</span></a>
-
-      <h2>Good to know</h2>
-      <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
-
-      <details class="tech">
-          <summary>Self-hosting and technical details</summary>
-          <div class="techbody">
+      <section class="modal-overview" aria-label="About this bot">
+        <p class="desc">${bot.desc}</p>
+        <div class="facts">
+          <p class="fact">Watches for <b>${humanEvents(bot)}</b></p>
+          <p class="fact">Workflow permissions <b>${permList || "none required"}</b></p>
+        </div>
+        <h2>Good to know</h2>
+        <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
+      </section>
+      <section class="modal-setup" aria-labelledby="modal-setup-title">
+        <h2 id="modal-setup-title">Set up this bot</h2>
+        <div class="setup-options" role="group" aria-label="Setup options">
+          <button class="btn" type="button" data-mode="actions" aria-controls="setup-panel">GitHub Actions</button>
+          <button class="btn" type="button" data-mode="binary" aria-controls="setup-panel">Download and run</button>
+          <button class="btn" type="button" data-mode="docker" aria-controls="setup-panel">Docker Compose</button>
+          <button class="btn" type="button" data-mode="guide" aria-controls="technical-guide">Server guide</button>
+        </div>
+        <div class="setup-panel" id="setup-panel">
+          <div class="setup-output">
+            <div class="setup-actions">
+              <button class="btn primary" id="modal-agent-copy" type="button" aria-describedby="agent-help">Copy agent prompt</button>
+              <button class="btn" id="modal-copy" type="button">Copy setup</button>
+            </div>
+            <p class="setup-intro" id="agent-help">Open your GitHub project in your coding agent, then paste the prompt there.</p>
+            <p class="setup-intro" id="setup-hint"></p>
+            <pre id="modal-config" tabindex="0" aria-label="Generated setup"></pre>
+          </div>
+        </div>
+        <div class="technical-guide" id="technical-guide" role="region" aria-label="Self-hosting and technical guide" tabindex="0" hidden>
             <h2>Download prebuilt binary</h2>
             <div class="codewrap"><button class="btn" data-copy="install" type="button">Copy install command</button><pre tabindex="0" aria-label="Install command">${installCmd}</pre></div>
             <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code>: verify before deploying.</li></ul>
@@ -540,19 +562,53 @@ function openModal(bot) {
               <li>Extra configuration: ${envList}</li>
               <li>Port: <code>${bot.port}</code> · <a href="bots/${bot.name}.html">detail page</a> · <a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">source &amp; README</a></li>
             </ul>
-          </div>
-      </details>
+        </div>
+      </section>
     </div>`;
-  modalContent.querySelector("#configure-bot").onclick = () => {
-    genbot.value = bot.name;
-    genmode.value = "actions";
-    renderGen();
-    modal.close();
+  const modeChoices = [...modalContent.querySelectorAll(".setup-options button")];
+  const setupPanel = modalContent.querySelector("#setup-panel");
+  const technicalGuide = modalContent.querySelector("#technical-guide");
+  const setupHint = modalContent.querySelector("#setup-hint");
+  const modalConfig = modalContent.querySelector("#modal-config");
+  const modalCopy = modalContent.querySelector("#modal-copy");
+  const agentCopy = modalContent.querySelector("#modal-agent-copy");
+  const agentHelp = modalContent.querySelector("#agent-help");
+  const workflowPath = `.github/workflows/${bot.name}.yml`;
+  const hints = {
+    actions: `Setting it up yourself? Save the setup below as <code>${workflowPath}</code>, then push it to GitHub.`,
+    binary: "Run these commands on your server to download, check, and start the bot.",
+    docker: "Save this as <code>docker-compose.yml</code> in your local copy of the bot project.",
   };
+  function showMode(mode) {
+    const showGuide = mode === "guide";
+    for (const button of modeChoices) button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+    setupPanel.hidden = showGuide;
+    technicalGuide.hidden = !showGuide;
+    agentCopy.hidden = agentHelp.hidden = mode !== "actions";
+    if (showGuide) technicalGuide.scrollTop = 0;
+    else {
+      setupHint.innerHTML = hints[mode];
+      modalConfig.textContent = buildConfig(bot, mode);
+      modalConfig.scrollTop = 0;
+    }
+  }
+  for (const button of modeChoices) button.onclick = () => showMode(button.dataset.mode);
+  modalCopy.onclick = () => copyText(modalCopy, modalConfig.textContent);
+  agentCopy.onclick = () => copyText(agentCopy, [
+    `Set up the ${bot.name} bot in the GitHub repository I have open.`,
+    `Check that this is the intended repository. Add the workflow below at ${workflowPath}. If a workflow already runs this bot, update that workflow instead so the bot only runs once.`,
+    "Keep any project-specific settings already in use. If a setting is missing and you cannot infer it from the repository, ask me for it. Keep tokens in GitHub secrets and reference them by name.",
+    "Check the workflow against the repository’s GitHub Actions rules. Tell me what you changed and one way to test the bot after the workflow reaches the default branch. Leave the change ready for me to review.",
+    "",
+    "Workflow:",
+    modalConfig.textContent,
+  ].join("\n"));
+  showMode("actions");
   for (const button of modalContent.querySelectorAll("[data-copy]")) {
     button.onclick = () => copyText(button, button.dataset.copy === "install" ? installCmd : buildCmd);
   }
   modal.showModal();
+  modal.scrollTop = 0;
 }
 
 // ---------- live demo: watch three bots react to one issue ----------
@@ -615,9 +671,7 @@ for (const b of BOTS) {
   o.textContent = `${b.emoji} ${b.name}`;
   genbot.appendChild(o);
 }
-function renderGen() {
-  const bot = BOTS.find(b => b.name === genbot.value) || BOTS[0];
-  const mode = genmode.value;
+function buildConfig(bot, mode) {
   const isCron = bot.type === "cron";
   let out = "";
   if (mode === "binary") {
@@ -683,6 +737,11 @@ ${isCron ? "            REPO=\${{ github.repository }}\n" : ""}${bot.requiredEnv
       out += "\n\n# NOTE: Projects v2 mutations need a classic PAT or GitHub App token —\n# secrets.GITHUB_TOKEN cannot manage projects. Store a PAT as GH_PAT and use it instead.";
     }
   }
+  return out;
+}
+function renderGen() {
+  const bot = BOTS.find(b => b.name === genbot.value) || BOTS[0];
+  const out = buildConfig(bot, genmode.value);
   const changed = genout.textContent && genout.textContent !== out;
   genout.textContent = out;
   if (changed && !reducedMotion.matches) {
