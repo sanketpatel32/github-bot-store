@@ -5,506 +5,137 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta property="og:title" content="github-bot-store — tiny self-hosted GitHub automation bots">
 <meta property="og:description" content="32 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
-<meta name="theme-color" content="#0a0c10">
+<meta name="theme-color" content="#f8f7fc">
 <title>GitHub Bot Store — tiny self-hosted automation</title>
-<style>
-  :root {
-    --bg: #0a0c10; --surface: #11151c; --surface2: #171d27; --border: #232c3a;
-    --text: #e8edf4; --muted: #93a1b8; --accent: #58a6ff; --accent2: #a371f7;
-    --teal: #39d2c0; --green: #3fb950; --orange: #d29922; --red: #f85149;
-    --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  a { color: var(--accent); }
-  .container { max-width: 1400px; margin: 0 auto; padding: 0 32px; }
-
-  /* ---------- nav ---------- */
-  nav {
-    position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px);
-    background: rgba(10,12,16,.82); border-bottom: 1px solid var(--border);
-  }
-  nav .container { display: flex; align-items: center; gap: 26px; height: 58px; }
-  .brand { font-family: var(--mono); font-weight: 700; color: var(--text); text-decoration: none; font-size: 1.02rem; display: flex; align-items: center; gap: 9px; }
-  .brand .dot { color: var(--accent); }
-  .navlinks { display: flex; gap: 22px; margin-left: auto; align-items: center; }
-  .navlinks a { color: var(--muted); text-decoration: none; font-size: .92rem; transition: color .15s; }
-  .navlinks a:hover { color: var(--text); }
-  .navlinks .gh-btn { border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; color: var(--text); display: flex; align-items: center; gap: 7px; }
-  .navlinks .gh-btn:hover { border-color: var(--accent); }
-
-  /* ---------- hero ---------- */
-  .hero { position: relative; overflow: hidden; padding: 92px 0 84px; text-align: center; }
-  .hero::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background:
-      radial-gradient(600px 300px at 20% 0%, rgba(88,166,255,.12), transparent 70%),
-      radial-gradient(600px 300px at 80% 0%, rgba(163,113,247,.10), transparent 70%);
-  }
-  .hero .grid-lines {
-    position: absolute; inset: 0; pointer-events: none; opacity: .35;
-    background-image: linear-gradient(var(--border) 1px, transparent 1px),
-                      linear-gradient(90deg, var(--border) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent);
-    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent);
-  }
-  .hero-inner { position: relative; }
-  .pill {
-    display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px;
-    border: 1px solid var(--border); border-radius: 30px; font-size: .82rem;
-    color: var(--muted); background: rgba(17,21,28,.7); margin-bottom: 24px;
-  }
-  .pill .live { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-  h1 {
-    font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800; letter-spacing: -2px; line-height: 1.08;
-  }
-  h1 .grad {
-    background: linear-gradient(92deg, var(--accent) 10%, var(--accent2) 60%, var(--teal) 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    background-size: 220% 100%;
-    animation: shimmer 5s linear infinite;
-  }
-  .tagline { color: var(--muted); font-size: 1.15rem; margin: 18px auto 0; max-width: 640px; line-height: 1.6; }
-  .stats { display: flex; gap: 40px; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
-  .stat .num {
-    font-size: 1.9rem; font-weight: 800; font-family: var(--mono);
-    background: linear-gradient(180deg, var(--text), var(--muted));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .stat .label { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: 1.5px; }
-  .cta-row { margin-top: 34px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-  .btn {
-    padding: 11px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: .95rem;
-    border: 1px solid var(--border); color: var(--text); background: var(--surface);
-    transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .btn:hover { border-color: var(--accent); transform: translateY(-1px); }
-  .btn:active { transform: translateY(0); }
-  .btn.primary { background: linear-gradient(135deg, #238636, #2ea043); border-color: transparent; }
-  .btn.primary:hover { filter: brightness(1.12); border-color: transparent; }
-
-  /* ---------- terminal ---------- */
-  .term {
-    max-width: 720px; margin: 44px auto 0; text-align: left;
-    background: #0d1117; border: 1px solid var(--border); border-radius: 12px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(88,166,255,.06);
-    overflow: hidden; position: relative;
-  }
-  .term-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
-  .term-bar span { width: 11px; height: 11px; border-radius: 50%; }
-  .term-bar .r { background: #ff5f57; } .term-bar .y { background: #febc2e; } .term-bar .g { background: #28c840; }
-  .term-bar .title { white-space: nowrap; margin-left: 8px; color: var(--muted); font-size: .78rem; font-family: var(--mono); }
-  .term-body { padding: 18px 20px; font-family: var(--mono); font-size: .86rem; line-height: 1.9; white-space: pre-wrap; word-break: break-all; }
-  .term-body .p { color: var(--teal); user-select: none; }
-  .term-body .c { color: var(--muted); }
-  .term-body .cmd { color: var(--text); }
-  .copy-btn {
-    position: absolute; right: 10px; top: 52px; padding: 4px 10px; font-size: .75rem;
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--muted); cursor: pointer; font-family: var(--mono); transition: all .15s;
-  }
-  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
-
-  /* ---------- hero animations ---------- */
-  @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
-  .hero-inner > * { animation: rise .7s cubic-bezier(.2,.7,.3,1) both; }
-  .hero-inner > .pill { animation-delay: .05s; }
-  .hero-inner > h1 { animation-delay: .15s; }
-  .hero-inner > .tagline { animation-delay: .28s; }
-  .hero-inner > .stats { animation-delay: .4s; }
-  .hero-inner > .cta-row { animation-delay: .5s; }
-  .hero-inner > .term { animation-delay: .62s; }
-  @keyframes shimmer { from { background-position: 0% 0; } to { background-position: 220% 0; } }
-  .hero .grid-lines { animation: griddrift 24s linear infinite; }
-  @keyframes griddrift { from { background-position: 0 0, 0 0; } to { background-position: 48px 48px, 48px 48px; } }
-  .stat .num { transition: transform .2s; }
-  .stat:hover .num { transform: scale(1.12); }
-  .caret { display: inline-block; width: 8px; height: 1.05em; background: var(--teal); vertical-align: text-bottom; animation: blink 1s steps(1) infinite; margin-left: 2px; }
-  @keyframes blink { 50% { opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) {
-    .hero-inner > *, h1 .grad, .hero .grid-lines, .caret { animation: none !important; }
-  }
-
-
-  /* ---------- rebuilt hero ---------- */
-  .hero { padding: 72px 0 60px; text-align: left; }
-  .hero-split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
-  @media (max-width: 900px) { .hero-split { grid-template-columns: 1fr; } .hero-visual { display: none; } }
-  .hero-copy h1 { font-size: clamp(2.6rem, 5.2vw, 4.4rem); }
-  .hero-visual { position: relative; height: 420px; }
-  .floatcard {
-    position: absolute; display: flex; align-items: center; gap: 14px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px 20px; box-shadow: 0 18px 50px rgba(0,0,0,.45); width: 300px;
-    animation: floaty 5.5s ease-in-out infinite;
-  }
-  .floatcard .fe { font-size: 1.8rem; }
-  .floatcard b { display: block; font-size: .92rem; }
-  .floatcard small { color: var(--muted); font-size: .78rem; }
-  .fc1 { top: 8%; left: 4%; animation-delay: 0s; border-left: 3px solid var(--accent); }
-  .fc2 { top: 30%; right: 2%; animation-delay: 1.2s; border-left: 3px solid var(--green); }
-  .fc3 { top: 56%; left: 8%; animation-delay: 2.4s; border-left: 3px solid var(--orange); }
-  .fc4 { top: 78%; right: 10%; animation-delay: 3.4s; border-left: 3px solid var(--accent2); }
-  @keyframes floaty { 0%,100% { transform: translateY(0) rotate(-.5deg); } 50% { transform: translateY(-13px) rotate(.5deg); } }
-  .facts-strip {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 56px;
-  }
-  .fct {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
-    color: var(--muted); font-size: .92rem; line-height: 1.45;
-  }
-  .fct b { display: block; color: var(--text); font-size: 1.5rem; font-family: var(--mono); margin-bottom: 4px; }
-
-  /* ---------- demo section ---------- */
-  .demo-sec { padding: 90px 0 30px; scroll-margin-top: 80px; }
-  .demo-wrap { max-width: 760px; margin: 0 auto; }
-  .gh-issue {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.3);
-  }
-  .ghi-head { font-size: 1.05rem; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-  .ghi-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .ghi-dot.open { background: var(--green); box-shadow: 0 0 10px rgba(63,185,80,.6); }
-  .ghi-num { color: var(--muted); font-weight: 400; }
-  .ghi-body { color: var(--muted); margin: 12px 0; line-height: 1.55; font-size: .95rem; }
-  .ghi-meta { color: var(--muted); font-size: .8rem; }
-  .demo-feed { margin: 6px 0 0 26px; border-left: 2px solid var(--border); padding-left: 24px; min-height: 60px; }
-  .devt {
-    margin: 18px 0; opacity: 0; transform: translateY(12px);
-    transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1);
-  }
-  .devt.show { opacity: 1; transform: none; }
-  .devt .dt { font-size: .8rem; color: var(--muted); margin-bottom: 6px; font-family: var(--mono); }
-  .devt .dbox {
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 11px; padding: 13px 17px;
-    font-size: .92rem; line-height: 1.5; display: flex; gap: 11px; align-items: flex-start;
-  }
-  .devt .dbox .demoji { font-size: 1.25rem; }
-  .devt .dbotname { font-family: var(--mono); font-size: .75rem; color: var(--accent); display: block; margin-bottom: 3px; }
-  .demo-replay { text-align: center; margin-top: 20px; }
-  .dlabel { display:inline-block; font-family: var(--mono); font-size:.7rem; padding: 1px 8px; border-radius: 10px; background: rgba(215,58,73,.25); color: #ff7b72; border: 1px solid rgba(215,58,73,.4); margin: 0 3px; }
-  .dlabel.feat { background: rgba(88,166,255,.18); color: var(--accent); border-color: rgba(88,166,255,.35); }
-
-  /* ---------- gallery ---------- */
-  .gallery-head { padding-top: 84px; }
-  h2.section { font-size: 1.7rem; font-weight: 800; letter-spacing: -.5px; }
-  .sub { color: var(--muted); font-size: .95rem; margin-top: 4px; }
-  .browse-head { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
-  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  #search {
-    width: 260px; padding: 10px 16px; font-size: .92rem;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
-    color: var(--text); outline: none; transition: border-color .15s;
-  }
-  #search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,.15); }
-  .fpill {
-    padding: 8px 16px; min-height: 38px; border-radius: 9px; border: 1px solid var(--border); cursor: pointer;
-    background: var(--surface); color: var(--muted); font-size: .88rem; transition: all .15s;
-  }
-  .fpill:hover { color: var(--text); }
-  .fpill.active { background: rgba(88,166,255,.12); border-color: var(--accent); color: var(--accent); font-weight: 600; }
-
-  /* sticky category nav */
-  .catnav {
-    position: sticky; top: 58px; z-index: 40; display: flex; gap: 8px; flex-wrap: wrap;
-    padding: 12px 0; margin-bottom: 8px;
-    background: rgba(10,12,16,.9); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-  }
-  .catnav a {
-    display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 20px;
-    border: 1px solid var(--border); color: var(--muted); text-decoration: none; font-size: .85rem;
-    transition: all .18s; background: var(--surface);
-  }
-  .catnav a:hover { color: var(--text); border-color: var(--accent); transform: translateY(-1px); }
-  .catnav a .count {
-    font-family: var(--mono); font-size: .72rem; background: var(--surface2);
-    padding: 1px 8px; border-radius: 12px; color: var(--muted);
-  }
-
-  /* category sections */
-  .catsection { padding: 54px 0 30px; scroll-margin-top: 130px; }
-  .catsection .cathead { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
-  .catsection h3.cat-title { font-size: 1.45rem; font-weight: 800; letter-spacing: -.4px; }
-  .catsection .cat-count { font-family: var(--mono); color: var(--muted); font-size: .85rem; }
-  .catsection .cat-blurb { color: var(--muted); font-size: .98rem; max-width: 680px; line-height: 1.55; margin-bottom: 24px; }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
-  .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    padding: 20px; cursor: pointer; transition: all .2s ease; position: relative; overflow: hidden;
-  }
-  .card::before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: var(--card-accent, var(--accent)); opacity: 0; transition: opacity .2s;
-  }
-  .card:hover { border-color: var(--card-accent, var(--accent)); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
-  .card:hover::before { opacity: 1; }
-  .card .top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .card .badge {
-    width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center;
-    font-size: 1.35rem; border: 1px solid color-mix(in srgb, var(--card-accent, var(--accent)) 35%, transparent);
-    background: color-mix(in srgb, var(--card-accent, var(--accent)) 12%, transparent);
-  }
-  .card h4.botname { font-family: var(--mono); font-size: .95rem; font-weight: 600; letter-spacing: -.2px; }
-  .card .port { color: var(--muted); font-family: var(--mono); font-size: .73rem; margin-left: auto; flex-shrink: 0; }
-  .card p { color: var(--muted); font-size: .9rem; line-height: 1.55; }
-  .card .meta { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
-  .tag {
-    font-family: var(--mono); font-size: .68rem; padding: 2px 9px; border-radius: 5px;
-    border: 1px solid var(--border); color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
-  }
-  .tag.cron { color: var(--orange); }
-  .empty { text-align: center; color: var(--muted); padding: 60px 0; font-size: 1rem; }
-  .hidden { display: none !important; }
-
-  /* ---------- how ---------- */
-  .how { padding: 76px 0 20px; }
-  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 16px; margin-top: 26px; }
-  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
-  .step .n {
-    width: 30px; height: 30px; border-radius: 8px; background: rgba(88,166,255,.12); color: var(--accent);
-    display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: .9rem;
-  }
-  .step .stephead { font-size: 1rem; margin: 10px 0 6px; }
-  .step p { color: var(--muted); font-size: .88rem; line-height: 1.55; }
-  .step code { font-family: var(--mono); font-size: .82em; background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
-
-  /* ---------- modal ---------- */
-  #overlay {
-    display: none; position: fixed; inset: 0; background: rgba(4,6,10,.78); backdrop-filter: blur(4px);
-    z-index: 100; padding: 40px 20px; overflow-y: auto;
-  }
-  #overlay.open { display: block; animation: fadein .15s ease; }
-  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
-  #modal {
-    max-width: 980px; width: 100%; margin: 0 auto; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 16px; padding: 0;
-    box-shadow: 0 32px 80px rgba(0,0,0,.6);
-    max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain;
-    animation: slideup .18s ease;
-  }
-  @keyframes slideup { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
-  #modal .mhead {
-    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 14px;
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 20px 30px; border-radius: 16px 16px 0 0;
-  }
-  #modal .mhead h2 { margin: 0; font-size: 1.3rem; flex: 1; }
-  #modal .mbody { display: grid; grid-template-columns: 240px 1fr; gap: 0; }
-  #modal .mside {
-    border-right: 1px solid var(--border); padding: 24px 22px;
-    font-size: .85rem; color: var(--muted);
-  }
-  #modal .mside .meta { margin-bottom: 18px; }
-  #modal .mside .meta b { display: block; color: var(--accent); font-size: .72rem; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 5px; }
-  #modal .mside code { font-size: .82em; }
-  #modal .mmain { padding: 24px 30px 34px; min-width: 0; }
-  @media (max-width: 720px) {
-    #modal .mbody { grid-template-columns: 1fr; }
-    #modal .mside { border-right: none; border-bottom: 1px solid var(--border); }
-  }
-  #modal h2 { font-family: var(--mono); display: flex; align-items: center; gap: 12px; font-size: 1.35rem; }
-  #modal .desc { color: var(--muted); margin-bottom: 18px; }
-  #modal h4 { margin: 22px 0 8px; color: var(--accent); font-size: .8rem; text-transform: uppercase; letter-spacing: 1.5px; }
-  #modal .codewrap { position: relative; }
-  #modal pre {
-    background: #0a0c10; border: 1px solid var(--border); border-radius: 9px;
-    padding: 15px; overflow-x: auto; font-size: .84rem; font-family: var(--mono); line-height: 1.75;
-  }
-  #modal ul { padding-left: 20px; color: var(--muted); font-size: .93rem; }
-  #modal li { margin: 4px 0; }
-  #modal code { font-family: var(--mono); background: rgba(110,118,129,.18); padding: 1px 6px; border-radius: 4px; font-size: .85em; }
-  .mcopy {
-    position: absolute; right: 8px; top: 8px; padding: 3px 10px; font-size: .72rem;
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--muted); cursor: pointer; font-family: var(--mono);
-  }
-  .mcopy:hover { color: var(--text); border-color: var(--accent); }
-  #close {
-    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
-    width: 34px; height: 34px; border-radius: 8px; font-size: 1.15rem; cursor: pointer; line-height: 1;
-    flex-shrink: 0;
-  }
-  #close:hover { color: var(--text); border-color: var(--accent); }
-
-  footer { border-top: 1px solid var(--border); padding: 36px 0 44px; text-align: center; color: var(--muted); font-size: .88rem; margin-top: 60px; }
-  footer a { text-decoration: none; }
-  .card:focus-visible, .fpill:focus-visible, .mcopy:focus-visible, .btn:focus-visible, #search:focus-visible, #permfilter:focus-visible, #close:focus-visible, .copy-btn:focus-visible, nav a:focus-visible, .catnav a:focus-visible {
-    outline: 2px solid var(--accent); outline-offset: 2px;
-  }
-  .typebadge {
-    font-family: var(--mono); font-size: .68rem; padding: 3px 10px; border-radius: 20px;
-    border: 1px solid var(--border); color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
-  }
-  .typebadge.cron { color: var(--orange); }
-
-  /* ---------- scroll-in + microinteractions ---------- */
-  .card { opacity: 0; transform: translateY(18px); }
-  .card.in { opacity: 1; transform: none; transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1), border-color .2s, box-shadow .2s; }
-  .card.in:hover { transition: all .18s ease; }
-  .card .badge { transition: transform .22s cubic-bezier(.3,1.4,.5,1); }
-  .card:hover .badge { transform: scale(1.12) rotate(-4deg); }
-  .card h4.bottitle { transition: color .18s; }
-  .card:hover h4.bottitle { color: var(--card-accent, var(--accent)); }
-  .catnav a { transition: all .2s; }
-  .catnav a.spot { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,.1); }
-  .step { transition: transform .2s, border-color .2s; }
-  .step:hover { transform: translateY(-3px); border-color: var(--accent); }
-  details.tech { margin-top: 22px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  details.tech summary {
-    padding: 13px 18px; cursor: pointer; color: var(--muted); font-size: .9rem; user-select: none;
-    list-style: none; display: flex; align-items: center; gap: 10px; transition: color .15s, background .15s;
-  }
-  details.tech summary:hover { color: var(--text); background: rgba(88,166,255,.05); }
-  details.tech summary::before { content: "▸"; transition: transform .2s; display: inline-block; }
-  details.tech[open] summary::before { transform: rotate(90deg); }
-  details.tech .techbody { padding: 4px 18px 18px; border-top: 1px solid var(--border); }
-  .ezsteps { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 6px; }
-  .ezstep { display: flex; gap: 14px; align-items: flex-start; }
-  .ezstep .ezn {
-    width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: rgba(63,185,80,.15); color: var(--green);
-    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .82rem; font-family: var(--mono);
-  }
-  .ezstep p { color: var(--text); font-size: .95rem; line-height: 1.5; }
-  .ezstep p small { color: var(--muted); display: block; margin-top: 2px; font-size: .83rem; }
-  .facts { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 4px; }
-  .fact { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 8px 13px; font-size: .84rem; color: var(--muted); }
-  .fact b { color: var(--text); font-weight: 600; }
-  @media (prefers-reduced-motion: reduce) { .card { opacity: 1; transform: none; } }
-
-  @media (max-width: 640px) {
-    #search { width: 100%; }
-    .navlinks a:not(.gh-btn) { display: none; }
-  }
-</style>
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
-
-<nav>
+<nav class="site-nav" aria-label="Site navigation">
   <div class="container">
-    <a class="brand" href="#"><span class="dot">🤖</span> github-bot-store</a>
+    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">&gt;_</span> GitHub Bot Store</a>
     <div class="navlinks">
-      <a href="#gallery">Bots</a>
-      <a href="#how">How it works</a>
-      <a class="gh-btn" href="https://github.com/sanketpatel32/github-bot-store">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        Star
-      </a>
+      <a href="#gallery">Browse bots</a>
+      <a href="#how">Setup</a>
+      <a class="gh-btn" href="https://github.com/sanketpatel32/github-bot-store"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
     </div>
   </div>
 </nav>
 
 <header class="hero">
-  <div class="grid-lines"></div>
   <div class="container hero-inner">
-    <div class="hero-split">
-      <div class="hero-copy">
-        <div class="pill"><span class="live"></span> free · open source · runs itself</div>
-        <h1>Meet the robots<br>that <span class="grad">keep your repo tidy</span></h1>
-        <p class="tagline" style="margin-left:0;text-align:left">Pull requests label themselves. New contributors get welcomed. Dead issues clean themselves up. Release notes write themselves. Pick the robots you want — they start working in minutes, and you never think about them again.</p>
-        <div class="cta-row" style="justify-content:flex-start">
-          <a class="btn primary" href="#gallery">Meet the 32 robots</a>
-          <a class="btn" href="#demo">Watch one work ↓</a>
-        </div>
+    <div>
+      <p class="eyebrow">Open-source GitHub automation</p>
+      <h1>Put repo chores<br>on <span>autopilot.</span></h1>
+      <p class="tagline">Label pull requests, triage issues, and draft releases with small Go bots. Run them in GitHub Actions or on your own server.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#gallery">Browse the bots <span aria-hidden="true">↓</span></a>
+        <a class="btn" href="#demo">See a bot in action <span aria-hidden="true">↗</span></a>
       </div>
-      <div class="hero-visual" aria-hidden="true">
-        <div class="floatcard fc1"><span class="fe">📏</span><div><b>Sizes up pull requests</b><small>just labeled PR #142 as Small</small></div></div>
-        <div class="floatcard fc2"><span class="fe">👋</span><div><b>Welcomes newcomers</b><small>said hi to a first-time contributor</small></div></div>
-        <div class="floatcard fc3"><span class="fe">🥀</span><div><b>Closes forgotten issues</b><small>marked 3 old issues as stale</small></div></div>
-        <div class="floatcard fc4"><span class="fe">📝</span><div><b>Writes release notes</b><small>drafted v0.2.0 for you</small></div></div>
-      </div>
+      <p class="hero-meta"><span><b id="botcount">32</b> bots</span><span>Zero dependencies</span><span>MIT licensed</span></p>
     </div>
-    <div class="facts-strip">
-      <div class="fct"><b>32</b> robots to pick from</div>
-      <div class="fct"><b>Zero</b> installation — they can live inside GitHub itself</div>
-      <div class="fct"><b>$4</b> is enough server for all of them, if you self-host</div>
-      <div class="fct"><b>Free</b> forever, MIT licensed</div>
+    <div class="workflow" aria-hidden="true">
+      <div class="workflow-bar"><span>Example workflow</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="workflow-body">
+        <div class="workflow-event"><span>Pull request opened</span><span>#142</span></div>
+        <ul class="workflow-list">
+          <li><span>📏</span><code>pr-size-labeler</code><small>✓ Added size label</small></li>
+          <li><span>👀</span><code>reviewer-assigner</code><small>✓ Assigned reviewer</small></li>
+          <li><span>✍️</span><code>conventional-pr-check</code><small>✓ Checked title</small></li>
+        </ul>
+      </div>
     </div>
   </div>
 </header>
 
 <main class="container">
-
-  <section class="gallery-head" id="gallery">
+  <section class="catalog" id="gallery" aria-labelledby="catalog-title">
     <div class="browse-head">
       <div>
-        <h2 class="section">The gallery</h2>
-        <p class="sub">Every bot, grouped by the job it does. Click one to see exactly how to run it.</p>
+        <h2 class="section" id="catalog-title">Bot catalog</h2>
+        <p class="sub">Find a bot by task, name, or permission.</p>
       </div>
-      <div class="controls">
-        <select id="permfilter" aria-label="Filter by permission" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:9px 10px;font-family:var(--mono);font-size:.8rem">
-          <option value="">any permissions</option>
-          <option value="issues: write">issues: write</option>
-          <option value="pulls: read">pulls: read</option>
-          <option value="statuses: write">statuses: write</option>
-          <option value="checks: read">checks: read</option>
-          <option value="contents">contents</option>
-        </select>
-        <input id="search" type="text" aria-label="Search bots" placeholder="Search in plain words… try 'welcome' or 'merge'">
-      </div>
+      <p class="result-count" id="result-count" role="status"></p>
     </div>
-    <div class="catnav" id="catnav"></div>
+    <div class="catalog-tools">
+      <div class="controls" role="search" aria-label="Bot catalog">
+        <label class="search-wrap">
+          <svg aria-hidden="true" width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="8.5" cy="8.5" r="5.25"/><path d="m12.5 12.5 4 4"/>
+          </svg>
+          <input id="search" type="search" aria-label="Search bots" placeholder="Search bots, e.g. merge or welcome">
+        </label>
+        <select id="permfilter" aria-label="Filter by permission">
+          <option value="">Any permission</option>
+          <option value="issues: write">Issues · Write</option>
+          <option value="pull-requests: read">Pull requests · Read</option>
+          <option value="statuses: write">Statuses · Write</option>
+          <option value="checks: read">Checks · Read</option>
+          <option value="contents">Contents · Any access</option>
+        </select>
+      </div>
+      <nav class="catnav" id="catnav" aria-label="Bot categories"></nav>
+    </div>
+    <div id="sections"></div>
+    <div class="empty" id="empty" hidden>
+      <p>No bots match your search.</p>
+      <button class="btn" id="clear-filters" type="button">Clear filters</button>
+    </div>
+    <noscript><p class="sub">Enable JavaScript to search the catalog, or <a href="https://github.com/sanketpatel32/github-bot-store#the-bots">browse the bots on GitHub</a>.</p></noscript>
   </section>
 
-
-  <section class="demo-sec" id="demo">
-    <h2 class="section" style="text-align:center">This is what actually happens in your repo</h2>
-    <p class="sub" style="text-align:center;margin-bottom:34px">No configuration screens. No dashboards. The robots just show up and do the chores, like this:</p>
+  <section class="content-section" id="demo">
+    <h2 class="section">See bots triage an issue</h2>
+    <p class="sub">A simulated example of three bots responding to a new bug report.</p>
     <div class="demo-wrap">
       <div class="gh-issue">
-        <div class="ghi-head"><span class="ghi-dot open"></span> <b>Crash when uploading large files</b> <span class="ghi-num">#482</span></div>
-        <div class="ghi-body">whenever i upload anything bigger than 50mb the app just dies. no error, nothing. using firefox on linux if that matters</div>
-        <div class="ghi-meta">opened 2 minutes ago by <b>some-user</b> — their very first issue</div>
+        <div class="ghi-head"><span class="ghi-dot" aria-hidden="true"></span> <b>Crash when uploading large files</b> <span class="ghi-num">#482</span></div>
+        <p class="ghi-body">Uploads larger than 50 MB crash the app in Firefox on Linux.</p>
+        <p class="ghi-meta">First issue from a new contributor</p>
       </div>
       <div class="demo-feed" id="demofeed"></div>
-      <div class="demo-replay"><button class="btn" id="replaydemo" style="font-size:.85rem;padding:8px 18px">↺ watch it again</button></div>
+      <button class="btn" id="replaydemo" type="button">Replay demo <span aria-hidden="true">↻</span></button>
     </div>
   </section>
 
-  <div id="sections"></div>
-  <div class="empty hidden" id="empty">No bots match. Try different words.</div>
-
-  <section class="how" id="how">
-    <h2 class="section">How it works</h2>
+  <section class="content-section" id="how">
+    <h2 class="section">Run a bot your way</h2>
     <div class="steps">
-      <div class="step"><div class="n">1</div><h3 class="stephead">Build one file</h3><p><code>go build</code> turns any bot into a single small file. No runtime, no node_modules, no pip: copy it to any server and it just runs.</p></div>
-      <div class="step"><div class="n">2</div><h3 class="stephead">Point a webhook at it</h3><p>In your repo settings, add <code>http://your-server:PORT/webhook</code> as a webhook. The bot now hears everything that happens.</p></div>
-      <div class="step"><div class="n">3</div><h3 class="stephead">Forget it's there</h3><p>Each bot idles around 10MB of RAM. Run all 32 behind systemd or in tmux; your server won't notice.</p></div>
-      <div class="step"><div class="n">4</div><h3 class="stephead">No server? No problem</h3><p>Every bot also runs as a GitHub Action — zero servers, zero cost, nothing to maintain. Copy one workflow file and you're done.</p></div>
+      <div class="step"><h3>GitHub Actions</h3><p>Add a workflow to your repository and let GitHub run the bot when events arrive or on a schedule.</p></div>
+      <div class="step"><h3>Go binary</h3><p>Download a release or build from source. Point a GitHub webhook at the bot, or run scheduled bots with cron.</p></div>
+      <div class="step"><h3>Docker Compose</h3><p>Build the bot from the repository and run it as a container with a persistent spool.</p></div>
     </div>
   </section>
 
-  <section id="generator" style="max-width:720px;margin:60px auto 0;padding:0 0 40px">
-    <h2 class="section" style="font-size:1.3rem;margin-bottom:6px">⚙️ Config generator</h2>
-    <p style="color:var(--muted);font-size:.9rem;margin-bottom:14px">Pick a bot and how you want to run it, get a ready-to-paste configuration.</p>
-    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <select id="genbot" aria-label="Choose a bot" style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)"></select>
-      <select id="genmode" aria-label="Choose a deployment style" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-family:var(--mono)">
-        <option value="binary">binary + systemd</option>
-        <option value="docker">docker compose</option>
-        <option value="actions">github actions</option>
-      </select>
-      <button id="gencopy" class="copy-btn" style="position:static">copy</button>
+  <section class="content-section" id="generator" tabindex="-1">
+    <h2 class="section">Config generator</h2>
+    <p class="sub">Choose a bot and a deployment option to get a ready-to-paste configuration.</p>
+    <div class="generator-panel">
+      <div class="generator-controls">
+        <select id="genbot" aria-label="Choose a bot"></select>
+        <select id="genmode" aria-label="Choose a deployment style">
+          <option value="binary">Binary + systemd</option>
+          <option value="docker">Docker Compose</option>
+          <option value="actions">GitHub Actions</option>
+        </select>
+        <button id="gencopy" class="btn primary" type="button">Copy config</button>
+      </div>
+      <pre id="genout" tabindex="0" aria-label="Generated configuration"></pre>
     </div>
-    <pre id="genout" style="background:#0a0c10;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:.82rem;font-family:var(--mono);line-height:1.7;overflow-x:auto;white-space:pre"></pre>
   </section>
-
 </main>
 
-<div id="overlay">
-  <div id="modal">
-    <button id="close">&times;</button>
-    <div id="modal-content"></div>
-  </div>
-</div>
+<dialog id="modal" aria-labelledby="modal-title" closedby="any">
+  <div id="modal-content"></div>
+</dialog>
 
 <footer>
-  <div class="container">
-    github-bot-store · 32 bots · MIT · <a href="https://github.com/sanketpatel32/github-bot-store">sanketpatel32/github-bot-store</a>
+  <div class="container footer-inner">
+    <span>GitHub Bot Store · MIT licensed</span>
+    <div class="footer-links">
+      <a href="#gallery">Bot catalog</a>
+      <a href="#generator">Config generator</a>
+      <a href="https://github.com/sanketpatel32/github-bot-store">Source on GitHub</a>
+    </div>
   </div>
 </footer>
 
@@ -673,143 +304,131 @@ const BOTS = [
 
 ];
 
-// ---------- hero animations ----------
-(function () {
-  const el = document.getElementById("botcount");
-  if (!el) return;
-  const target = BOTS.length;
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) { el.textContent = target; return; }
-  let cur = 0;
-  const t0 = performance.now();
-  const dur = 1100;
-  (function tick(t) {
-    const p = Math.min(1, (t - t0) / dur);
-    const eased = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(eased * target);
-    if (p < 1) requestAnimationFrame(tick);
-  })(t0);
-})();
-
-
-
 // ---------- gallery ----------
 const CATEGORIES = [
-  { id: "Pull requests", blurb: "Bots that watch your pull requests: they label them, assign reviewers, check titles and templates, warn about conflicts, and merge when everything is green." },
-  { id: "Issues", blurb: "Bots that keep the issue tracker healthy: instant triage labels, duplicate detection, welcomes for newcomers, and cleanup of things nobody has touched in months." },
-  { id: "Releases & CI", blurb: "Bots that care about shipping: draft release notes as you merge, explain CI failures, track flaky tests, and remind you when it is time to release." },
-  { id: "Repository hygiene", "blurb": "Bots that sweep the floors: dead branches, forgotten TODOs, broken links, inconsistent labels." },
-  { id: "Community & planning", blurb: "Bots that look after the humans: weekly digests, contributor celebrations, unanswered discussions, project boards that stay in sync." },
+  { id: "Pull requests", blurb: "Label changes, assign reviewers, and keep merges moving." },
+  { id: "Issues", blurb: "Triage reports, find duplicates, and welcome contributors." },
+  { id: "Releases & CI", blurb: "Draft release notes and make CI failures easier to follow." },
+  { id: "Repository hygiene", blurb: "Clean up merged branches, track TODOs, and check links." },
+  { id: "Community & planning", blurb: "Send digests, recognize contributors, and sync project boards." },
 ];
 
 const sectionsRoot = document.getElementById("sections");
 const catnav = document.getElementById("catnav");
+const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
 const emptyMsg = document.getElementById("empty");
-let query = "";
+const resultCount = document.getElementById("result-count");
+const search = document.getElementById("search");
+const permission = document.getElementById("permfilter");
+document.getElementById("botcount").textContent = BOTS.length;
 
-// build one section per category, filled lazily by render()
-const sectionEls = {};
-for (const cat of CATEGORIES) {
-  const botsInCat = BOTS.filter(b => (b.category || "Community & planning") === cat.id);
-  if (!botsInCat.length) continue;
-  const a = document.createElement("a");
-  a.href = "#cat-" + cat.id.replace(/[^a-z]/gi, "").toLowerCase();
-  a.innerHTML = `${cat.id} <span class="count">${botsInCat.length}</span>`;
-  catnav.appendChild(a);
+if (!("closedBy" in HTMLDialogElement.prototype)) {
+  let pressedOutside = false;
+  const isBackdrop = event => {
+    const bounds = modal.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX > bounds.right ||
+      event.clientY < bounds.top || event.clientY > bounds.bottom;
+  };
+  modal.addEventListener("pointerdown", event => { pressedOutside = isBackdrop(event); });
+  modal.addEventListener("pointerup", event => {
+    if (pressedOutside && isBackdrop(event)) modal.close();
+    pressedOutside = false;
+  });
+}
 
-  const sec = document.createElement("section");
-  sec.className = "catsection";
-  sec.id = "cat-" + cat.id.replace(/[^a-z]/gi, "").toLowerCase();
-  sec.innerHTML = `
+const groups = CATEGORIES.map(cat => {
+  const id = "cat-" + cat.id.replace(/[^a-z]/gi, "").toLowerCase();
+  const link = document.createElement("a");
+  link.href = "#" + id;
+  link.innerHTML = `${cat.id} <span class="count"></span>`;
+  catnav.appendChild(link);
+
+  const section = document.createElement("section");
+  section.className = "catsection";
+  section.id = id;
+  section.innerHTML = `
     <div class="cathead">
       <h3 class="cat-title">${cat.id}</h3>
-      <span class="cat-count">${botsInCat.length} bots</span>
+      <span class="cat-count"></span>
     </div>
     <p class="cat-blurb">${cat.blurb}</p>
     <div class="grid"></div>`;
-  sectionsRoot.appendChild(sec);
-  sectionEls[cat.id] = sec.querySelector(".grid");
-}
+  sectionsRoot.appendChild(section);
 
-
-// scroll-in: cards animate into view with a light stagger
-(function () {
-  const io = new IntersectionObserver((entries) => {
-    for (const en of entries) {
-      if (en.isIntersecting) {
-        en.target.classList.add("in");
-        io.unobserve(en.target);
-      }
-    }
-  }, { threshold: 0.12, rootMargin: "0px 0px -24px 0px" });
-  window.__cardIO = io;
-})();
-
-// scrollspy: highlight the category you are reading
-(function () {
-  const links = [...document.querySelectorAll(".catnav a")];
-  const secs = [...document.querySelectorAll(".catsection")];
-  const spy = new IntersectionObserver((entries) => {
-    for (const en of entries) {
-      if (en.isIntersecting) {
-        links.forEach(l => l.classList.toggle("spot", l.getAttribute("href") === "#" + en.target.id));
-      }
-    }
-  }, { rootMargin: "-30% 0px -60% 0px" });
-  secs.forEach(sec => spy.observe(sec));
-})();
+  const bots = BOTS.filter(bot => (bot.category || "Community & planning") === cat.id);
+  const grid = section.querySelector(".grid");
+  const cards = bots.map(bot => {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.style.setProperty("--card-accent", bot.accent);
+    card.innerHTML = `
+      <div class="top">
+        <div class="badge" aria-hidden="true">${bot.emoji}</div>
+        <div>
+          <h4 class="bottitle">${bot.title || bot.name}</h4>
+          <p class="botname">${bot.name}</p>
+        </div>
+      </div>
+      <p class="description">${bot.desc}</p>
+      <div class="meta">
+        <span class="tag ${bot.type}">${bot.type === "cron" ? "Scheduled" : "Webhook"}</span>
+        <span class="tag">${bot.perms.split(",")[0]}</span>
+        <button class="card-action" type="button" aria-haspopup="dialog" aria-label="View bot: ${bot.name}">View bot <span aria-hidden="true">↗</span></button>
+      </div>`;
+    card.querySelector("button").onclick = () => openModal(bot);
+    grid.appendChild(card);
+    const permissions = bot.perms.split(",").map(p => p.trim().replace(/^pulls:/, "pull-requests:"));
+    return { card, permissions, text: `${bot.name} ${bot.title || ""} ${bot.desc}`.toLowerCase() };
+  });
+  return { section, link, cards, headingCount: section.querySelector(".cat-count"), linkCount: link.querySelector(".count") };
+});
 
 function render() {
+  const q = search.value.trim().toLowerCase();
+  const perm = permission.value;
   let shown = 0;
-  const q = query.toLowerCase();
-  const perm = document.getElementById("permfilter").value;
-  for (const cat of CATEGORIES) {
-    const grid = sectionEls[cat.id];
-    if (!grid) continue;
-    grid.innerHTML = "";
-    let catShown = 0;
-    for (const bot of BOTS) {
-      if ((bot.category || "Community & planning") !== cat.id) continue;
-      if (perm && !bot.perms.split(",").some(p => p.replace(/\s/g,"") === perm.replace(/\s/g,""))) continue;
-      if (q && !bot.name.includes(q) && !bot.desc.toLowerCase().includes(q)) continue;
-      catShown++;
-      shown++;
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.setProperty("--card-accent", bot.accent);
-      card.innerHTML = `
-        <div class="top">
-          <div class="badge">${bot.emoji}</div>
-          <div>
-            <h4 class="bottitle" style="font-size:1.02rem;font-weight:700;letter-spacing:-.2px">${bot.title || bot.name}</h4>
-            <div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);opacity:.8">${bot.name}</div>
-          </div>
-        </div>
-        <p>${bot.desc}</p>
-        <div class="meta"><span class="tag ${bot.type}">${bot.type}</span><span class="tag" style="opacity:.65;font-size:.68rem">${bot.perms.split(",")[0]}</span></div>`;
-      card.tabIndex = 0;
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-label", `${bot.name} — open details`);
-      card.onclick = () => openModal(bot);
-      card.onkeydown = (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openModal(bot);
-        }
-      };
-      grid.appendChild(card);
-      if (window.__cardIO) {
-        window.__cardIO.observe(card);
-      } else {
-        card.classList.add("in");
-      }
+  for (const { section, link, cards, headingCount, linkCount } of groups) {
+    let count = 0;
+    for (const { card, permissions, text } of cards) {
+      const matchesPermission = !perm || permissions.some(p => p === perm || p.startsWith(perm + ":"));
+      const matches = matchesPermission && text.includes(q);
+      card.hidden = !matches;
+      if (matches) count++;
     }
-    grid.closest(".catsection").classList.toggle("hidden", catShown === 0);
+    section.hidden = link.hidden = count === 0;
+    headingCount.textContent = `${count} ${count === 1 ? "bot" : "bots"}`;
+    linkCount.textContent = count;
+    shown += count;
   }
-  emptyMsg.classList.toggle("hidden", shown > 0);
+  emptyMsg.hidden = shown > 0;
+  catnav.hidden = shown === 0;
+  resultCount.textContent = `${shown} of ${BOTS.length} bots`;
 }
 
+search.addEventListener("input", render);
+permission.addEventListener("change", render);
+document.getElementById("clear-filters").onclick = () => {
+  search.value = permission.value = "";
+  render();
+  search.focus();
+};
+
+async function copyText(button, value) {
+  if (button.getAttribute("aria-disabled") === "true") return;
+  const label = button.textContent;
+  button.setAttribute("aria-disabled", "true");
+  try {
+    await navigator.clipboard.writeText(value);
+    button.textContent = "Copied!";
+  } catch {
+    button.textContent = "Copy failed";
+  }
+  setTimeout(() => {
+    button.textContent = label;
+    button.removeAttribute("aria-disabled");
+  }, 1500);
+}
 
 const EVENT_WORDS = {
   pull_request: "pull requests being opened or updated",
@@ -823,43 +442,26 @@ const EVENT_WORDS = {
   discussion: "new discussions",
   pull_request_review: "reviews being submitted",
 };
-const PERM_WORDS = {
-  issues: "label and comment on issues",
-  "pull-requests": "label, comment on and merge pull requests",
-  contents: "read your repository files",
-  checks: "read CI results",
-  statuses: "read commit statuses",
-  discussions: "read discussions",
-  actions: "read workflow runs",
-};
 function humanEvents(bot) {
   const evs = bot.ghEvents || [];
   if (!evs.length) return "a daily timer";
   return evs.map(e => EVENT_WORDS[e] || e).join(", ");
 }
-function humanPerms(bot) {
-  const perms = bot.actionsPerms ? Object.keys(bot.actionsPerms) : [];
-  if (!perms.length) return "nothing special";
-  return perms.map(p => PERM_WORDS[p] || p).join(", ");
-}
-
 function openModal(bot) {
-  document.getElementById("modal").setAttribute("role", "dialog");
-  document.getElementById("modal").setAttribute("aria-modal", "true");
   const isCron = bot.type === "cron";
   const buildCmd = isCron
     ? `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... REPO=owner/repo\n./${bot.name}   # health endpoint on :${bot.port}`
     : `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... WEBHOOK_SECRET=...\n./${bot.name}   # listens on :${bot.port}`;
   const installCmd = `curl -L https://github.com/sanketpatel32/github-bot-store/releases/latest/download/${bot.name}-linux-amd64.tar.gz | tar xz\nchmod +x ${bot.name}-linux-amd64\n./${bot.name}-linux-amd64`;
   const setupSection = isCron
-    ? `<h4>Scheduling</h4>
+    ? `<h2>Scheduling</h2>
     <ul>
       <li>This bot runs on a schedule, not webhooks: it sweeps your repo periodically.</li>
       <li>Zero-server option: it already runs as a GitHub Action — copy the job from <code>.github/workflows/bots-cron.yml</code> (nightly at 03:17 UTC).</li>
       <li>Or cron it yourself: <code>17 3 * * * cd /opt/bots && GITHUB_TOKEN=... REPO=owner/repo ./${bot.name}</code></li>
       <li>Permissions: <code>${bot.perms}</code></li>
     </ul>`
-    : `<h4>Webhook setup</h4>
+    : `<h2>Webhook setup</h2>
     <ul>
       <li>URL: <code>http://your-server:${bot.port}/webhook</code> · content type <code>application/json</code></li>
       <li>Events: <b>${bot.events}</b></li>
@@ -872,87 +474,65 @@ function openModal(bot) {
     : `<code>${bot.perms}</code>`;
   const envList = (bot.requiredEnv || []).length
     ? bot.requiredEnv.map(e => `<code>${e}</code>`).join(" ")
-    : '<span style="opacity:.7">nothing beyond GITHUB_TOKEN</span>';
-  const ezAction = `
-    <div class="ezsteps">
-      <div class="ezstep"><div class="ezn">1</div><p>Copy one small file into your repo<small>the config generator at the bottom of this page writes it for you — pick this bot, choose "github actions", paste it in as <code>.github/workflows/${bot.name}.yml</code></small></p></div>
-      <div class="ezstep"><div class="ezn">2</div><p>Push it to GitHub<small>GitHub picks it up automatically — nothing to install, no server, no cost</small></p></div>
-      <div class="ezstep"><div class="ezn">3</div><p>Done — it just works<small>the bot now watches your repo and does its job on its own</small></p></div>
-    </div>`;
+    : "nothing beyond GITHUB_TOKEN";
   modalContent.innerHTML = `
     <div class="mhead">
-      <h2>${bot.emoji} ${bot.title || bot.name}</h2>
-      <span class="typebadge ${bot.type}">${bot.type === "cron" ? "runs daily" : "reacts live"}</span>
+      <div>
+        <p class="botname">${bot.name}</p>
+        <h1 id="modal-title"><span aria-hidden="true">${bot.emoji}</span> ${bot.title || bot.name}</h1>
+      </div>
+      <form method="dialog"><button id="close" class="btn" aria-label="Close bot details" autofocus>×</button></form>
     </div>
-    <div class="mbody" style="grid-template-columns:1fr">
-      <div class="mmain">
-        <p style="font-family:var(--mono);font-size:.8rem;color:var(--muted);margin-bottom:14px">${bot.name}</p>
-        <p class="desc" style="font-size:1.05rem;line-height:1.65;color:var(--text)">${bot.desc}</p>
+    <div class="mmain">
+      <p class="desc">${bot.desc}</p>
+      <div class="facts">
+        <p class="fact">Watches for <b>${humanEvents(bot)}</b></p>
+        <p class="fact">Workflow permissions <b>${permList || "none required"}</b></p>
+      </div>
 
-        <div class="facts">
-          <div class="fact">Watches for <b>${humanEvents(bot)}</b></div>
-          <div class="fact">Allowed to <b>${humanPerms(bot)}</b></div>
-          <div class="fact">Runs as <b>one tiny file, ~5MB</b></div>
-        </div>
+      <h2>Run with GitHub Actions</h2>
+      <ol class="ezsteps">
+        <li>Generate a workflow for this bot and save it as <code>.github/workflows/${bot.name}.yml</code>.</li>
+        <li>Push the workflow to your repository to let GitHub run the bot.</li>
+      </ol>
+      <a class="btn primary" id="configure-bot" href="#generator">Generate workflow <span aria-hidden="true">↗</span></a>
 
-        <h4 style="margin-top:26px">Start using it — no server needed</h4>
-        ${ezAction}
+      <h2>Good to know</h2>
+      <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
 
-        <h4>Good to know</h4>
-        <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
-
-        <details class="tech">
-          <summary>Technical details — run it on your own server, exact permissions, webhook setup</summary>
+      <details class="tech">
+          <summary>Self-hosting and technical details</summary>
           <div class="techbody">
-            <h4>Download prebuilt binary</h4>
-            <div class="codewrap"><button class="mcopy" data-copy="install">copy</button><pre>${installCmd}</pre></div>
+            <h2>Download prebuilt binary</h2>
+            <div class="codewrap"><button class="btn" data-copy="install" type="button">Copy install command</button><pre tabindex="0" aria-label="Install command">${installCmd}</pre></div>
             <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code>: verify before deploying.</li></ul>
 
-            <h4>Or build from source</h4>
-            <div class="codewrap"><button class="mcopy" data-copy="build">copy</button><pre>${buildCmd}</pre></div>
+            <h2>Or build from source</h2>
+            <div class="codewrap"><button class="btn" data-copy="build" type="button">Copy build command</button><pre tabindex="0" aria-label="Build command">${buildCmd}</pre></div>
 
             ${setupSection}
 
-            <h4>Exact permissions &amp; events</h4>
+            <h2>Exact permissions &amp; events</h2>
             <ul>
-              <li>Events: ${(bot.ghEvents || []).map(e => `<code>${e}</code>`).join(" ") || "<code>schedule</code>"}</li>
-              <li>Permissions: ${bot.actionsPerms ? Object.entries(bot.actionsPerms).map(([k,v]) => `<code>${k}: ${v}</code>`).join(" ") : `<code>${bot.perms}</code>`}</li>
-              <li>Extra configuration: ${(bot.requiredEnv || []).length ? bot.requiredEnv.map(e => `<code>${e}</code>`).join(" ") : "nothing beyond GITHUB_TOKEN"}</li>
+              <li>Events: ${evList}</li>
+              <li>Permissions: ${permList}</li>
+              <li>Extra configuration: ${envList}</li>
               <li>Port: <code>${bot.port}</code> · <a href="bots/${bot.name}.html">detail page</a> · <a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/${bot.name}">source &amp; README</a></li>
             </ul>
           </div>
-        </details>
-      </div>
+      </details>
     </div>`;
-  const closeBtn = document.getElementById("close");
-  modalContent.querySelector(".mhead").appendChild(closeBtn);
-  overlay.classList.add("open");
-  document.body.style.overflow = "hidden";
-  closeBtn.focus();
-
-  modalContent.querySelectorAll(".mcopy").forEach(btn => {
-    btn.onclick = (e) => {
-      navigator.clipboard.writeText(btn.dataset.copy === "install" ? installCmd : buildCmd);
-      e.target.textContent = "copied!";
-      setTimeout(() => e.target.textContent = "copy", 1500);
-    };
-  });
+  modalContent.querySelector("#configure-bot").onclick = () => {
+    genbot.value = bot.name;
+    genmode.value = "actions";
+    renderGen();
+    modal.close();
+  };
+  for (const button of modalContent.querySelectorAll("[data-copy]")) {
+    button.onclick = () => copyText(button, button.dataset.copy === "install" ? installCmd : buildCmd);
+  }
+  modal.showModal();
 }
-
-document.getElementById("close").onclick = closeModal;
-overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-function closeModal() {
-  overlay.classList.remove("open");
-  document.body.style.overflow = "";
-  // return the close button to its dormant spot so the next modal can move it again
-  document.getElementById("modal").insertBefore(document.getElementById("close"), modalContent);
-}
-
-document.getElementById("search").oninput = (e) => { query = e.target.value; render(); };
-document.getElementById("permfilter").addEventListener("change", render);
-
-// terminal copy button
 
 // ---------- live demo: watch three bots react to one issue ----------
 (function () {
@@ -972,17 +552,16 @@ document.getElementById("permfilter").addEventListener("change", render);
       timers.push(setTimeout(() => {
         const div = document.createElement("div");
         div.className = "devt";
-        div.innerHTML = `<div class="dt">${ev.t} — <span style="color:var(--accent)">🤖 a bot acts</span></div>
+        div.innerHTML = `<div class="dt">${ev.t}</div>
           <div class="dbox"><span class="demoji">${ev.emoji}</span><div><span class="dbotname">${ev.bot}</span>${ev.html}</div></div>`;
         feed.appendChild(div);
-        requestAnimationFrame(() => requestAnimationFrame(() => div.classList.add("show")));
       }, 700 + i * 1700));
     });
   }
   const io = new IntersectionObserver((en) => {
     if (en[0].isIntersecting) { io.disconnect(); play(); }
   }, { threshold: 0.3 });
-  io.observe(feed);
+  io.observe(document.querySelector(".gh-issue"));
   document.getElementById("replaydemo").onclick = play;
 })();
 
@@ -1070,11 +649,8 @@ ${isCron ? "            REPO=\${{ github.repository }}\n" : ""}${bot.requiredEnv
 }
 genbot.onchange = renderGen;
 genmode.onchange = renderGen;
-document.getElementById("gencopy").onclick = (e) => {
-  navigator.clipboard.writeText(genout.textContent);
-  e.target.textContent = "copied!";
-  setTimeout(() => e.target.textContent = "copy", 1500);
-};
+const genCopy = document.getElementById("gencopy");
+genCopy.onclick = () => copyText(genCopy, genout.textContent);
 renderGen();
 
 </script>

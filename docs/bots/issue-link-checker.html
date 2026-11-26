@@ -10,29 +10,51 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sanketpatel32.github.io/github-bot-store/bots/issue-link-checker.html">
 <meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#f8f7fc">
 <link rel="canonical" href="https://sanketpatel32.github.io/github-bot-store/bots/issue-link-checker.html">
-<style>
-  body { background:#0d1117; color:#e6edf3; font-family:system-ui,sans-serif; max-width:680px; margin:60px auto; padding:0 24px; line-height:1.6 }
-  h1 { font-family:ui-monospace,monospace }
-  .meta { color:#7d8590 }
-  code { background:rgba(110,118,129,.18); padding:1px 6px; border-radius:4px }
-  a { color:#58a6ff }
-  ul { color:#7d8590 }
-  .back { font-size:.9rem }
-</style>
+<link rel="stylesheet" href="../site.css">
 </head>
 <body>
-<p class="back"><a href="../index.html">← all bots</a></p>
-<h1>🔍 issue-link-checker</h1>
-<p>Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.</p>
-<p class="meta">type: <b>webhook</b> · port <code>8126</code> · events: Issues · permissions: <code>issues: write</code></p>
-<h3>Notes</h3>
-<ul><li>Skips github.com links to save rate quota</li><li>Edits re-check, comment updates in place</li></ul>
-<h3>Install</h3>
-<ul>
-<li><a href="https://github.com/sanketpatel32/github-bot-store/releases/latest">Prebuilt binaries</a> — linux amd64+arm64, with checksums</li>
-<li><a href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/issue-link-checker">Source and full README</a></li>
-<li>Zero servers: run as a GitHub Action — see <code>.github/workflows/bots-*.yml</code> in the repo</li>
-</ul>
+<nav class="site-nav" aria-label="Site navigation">
+  <div class="container">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">&gt;_</span> GitHub Bot Store</a>
+    <div class="navlinks">
+      <a class="gh-btn" href="https://github.com/sanketpatel32/github-bot-store">GitHub</a>
+    </div>
+  </div>
+</nav>
+<main class="container detail">
+  <a class="detail-back" href="../#gallery">← Back to bot catalog</a>
+  <header class="detail-hero">
+    <div class="badge" aria-hidden="true">🔍</div>
+    <span class="tag webhook">webhook</span>
+    <h1>issue-link-checker</h1>
+    <p>Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.</p>
+  </header>
+  <dl>
+    <div><dt>Events</dt><dd>Issues</dd></div>
+    <div><dt>Permissions</dt><dd><code>issues: write</code></dd></div>
+    <div><dt>Port</dt><dd><code>8126</code></dd></div>
+  </dl>
+  <section class="detail-section">
+    <h2>Good to know</h2>
+    <ul><li>Skips github.com links to save rate quota</li><li>Edits re-check, comment updates in place</li></ul>
+  </section>
+  <section class="detail-section">
+    <h2>Install</h2>
+    <p>Download a Linux binary for amd64 or arm64 with checksums, or run the bot as a GitHub Action using a workflow from the repository.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/sanketpatel32/github-bot-store/releases/latest">Download binaries</a>
+      <a class="btn" href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/issue-link-checker">Source and README</a>
+      <a class="btn" href="../#generator">Config generator</a>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="container footer-inner">
+    <span>GitHub Bot Store · MIT licensed</span>
+    <a href="https://github.com/sanketpatel32/github-bot-store">Source on GitHub</a>
+  </div>
+</footer>
 </body>
 </html>
