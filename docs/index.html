@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-type="software">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta property="og:title" content="github-bot-store — tiny self-hosted GitHub automation bots">
 <meta property="og:description" content="32 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
-<meta name="theme-color" content="#f8f7fc">
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<meta name="theme-color" content="#f7f4ed">
 <title>GitHub Bot Store — tiny self-hosted automation</title>
-<link rel="stylesheet" href="site.css?v=1d9fb7a">
+<link rel="stylesheet" href="site.css?v=triage">
 </head>
 <body>
 <nav class="site-nav" aria-label="Site navigation">
@@ -15,57 +17,58 @@
     <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">&gt;_</span> GitHub Bot Store</a>
     <div class="navlinks">
       <a href="#gallery">Browse bots</a>
-      <a href="#how">Setup</a>
+      <a href="#demo">Demo</a>
+      <a href="#generator">Set up a bot</a>
       <a class="gh-btn" href="https://github.com/sanketpatel32/github-bot-store"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
     </div>
   </div>
 </nav>
 
-<header class="hero">
-  <div class="container hero-inner">
-    <div>
-      <p class="eyebrow">Open-source GitHub automation</p>
-      <h1>Put repo chores<br>on <span>autopilot.</span></h1>
-      <p class="tagline">Label pull requests, triage issues, and draft releases with small Go bots. Run them in GitHub Actions or on your own server.</p>
-      <div class="cta-row">
-        <a class="btn primary" href="#gallery">Browse the bots <span aria-hidden="true">↓</span></a>
-        <a class="btn" href="#demo">See a bot in action <span aria-hidden="true">↗</span></a>
-      </div>
-      <p class="hero-meta"><span><b id="botcount">32</b> bots</span><span>Zero dependencies</span><span>MIT licensed</span></p>
-    </div>
-    <div class="workflow" aria-hidden="true">
-      <div class="workflow-bar"><span>Example workflow</span><span class="dots"><i></i><i></i><i></i></span></div>
-      <div class="workflow-body">
-        <div class="workflow-event"><span>Pull request opened</span><span>#142</span></div>
-        <ul class="workflow-list">
-          <li><span>📏</span><code>pr-size-labeler</code><small>✓ Added size label</small></li>
-          <li><span>👀</span><code>reviewer-assigner</code><small>✓ Assigned reviewer</small></li>
-          <li><span>✍️</span><code>conventional-pr-check</code><small>✓ Checked title</small></li>
-        </ul>
+<header class="landing">
+  <div class="container landing-inner">
+    <div class="landing-copy">
+      <p class="landing-kicker" data-enter><strong id="botcount">32</strong> free GitHub bots</p>
+      <h1 data-enter>Let bots handle <em>your GitHub chores.</em></h1>
+      <p class="landing-summary" data-enter>A bot is a small program that does a job for you. These bots can label bug reports, remind people to review code, and write release notes.</p>
+      <div class="cta-row" data-enter>
+        <a class="btn landing-primary" href="#gallery">Find a bot <span aria-hidden="true">↓</span></a>
+        <a class="btn landing-secondary" href="#how">How to run a bot <span aria-hidden="true">↗</span></a>
       </div>
     </div>
+    <section class="landing-stage" id="demo" aria-labelledby="demo-title" data-enter>
+      <div class="demo-wrap">
+        <div class="demo-bar">
+          <h2 id="demo-title">Bots at work</h2>
+          <button class="btn" id="replaydemo" type="button">Replay <span aria-hidden="true">↻</span></button>
+        </div>
+        <div class="gh-issue">
+          <div class="ghi-head"><span class="ghi-dot" aria-hidden="true"></span> <b>Crash when uploading large files</b> <span class="ghi-num">#482</span></div>
+          <p class="ghi-body">Uploads larger than 50 MB crash the app. There’s no error message.</p>
+        </div>
+        <div class="demo-feed" id="demofeed" aria-live="polite" aria-relevant="additions">
+          <noscript><p class="ghi-body">Enable JavaScript to replay the bot responses.</p></noscript>
+        </div>
+      </div>
+    </section>
   </div>
 </header>
 
 <main class="container">
   <section class="catalog" id="gallery" aria-labelledby="catalog-title">
-    <div class="browse-head">
-      <div>
-        <h2 class="section" id="catalog-title">Bot catalog</h2>
-        <p class="sub">Find a bot by task, name, or permission.</p>
-      </div>
-      <p class="result-count" id="result-count" role="status"></p>
-    </div>
-    <div class="catalog-tools">
+    <header class="browse-head">
+      <h2 class="section" id="catalog-title">Find the right bot</h2>
+      <p class="sub">Search for a bot by name or by what you want it to do.</p>
+    </header>
+    <div class="catalog-layout">
       <div class="controls" role="search" aria-label="Bot catalog">
         <label class="search-wrap">
           <svg aria-hidden="true" width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
             <circle cx="8.5" cy="8.5" r="5.25"/><path d="m12.5 12.5 4 4"/>
           </svg>
-          <input id="search" type="search" aria-label="Search bots" placeholder="Search bots, e.g. merge or welcome">
+          <input id="search" type="search" aria-label="Search bots" placeholder="Search by name or task">
         </label>
         <select id="permfilter" aria-label="Filter by permission">
-          <option value="">Any permission</option>
+          <option value="">Any GitHub permission</option>
           <option value="issues: write">Issues · Write</option>
           <option value="pull-requests: read">Pull requests · Read</option>
           <option value="statuses: write">Statuses · Write</option>
@@ -73,42 +76,34 @@
           <option value="contents">Contents · Any access</option>
         </select>
       </div>
-      <nav class="catnav" id="catnav" aria-label="Bot categories"></nav>
-    </div>
-    <div id="sections"></div>
-    <div class="empty" id="empty" hidden>
-      <p>No bots match your search.</p>
-      <button class="btn" id="clear-filters" type="button">Clear filters</button>
-    </div>
-    <noscript><p class="sub">Enable JavaScript to search the catalog, or <a href="https://github.com/sanketpatel32/github-bot-store#the-bots">browse the bots on GitHub</a>.</p></noscript>
-  </section>
-
-  <section class="content-section" id="demo">
-    <h2 class="section">See bots triage an issue</h2>
-    <p class="sub">A simulated example of three bots responding to a new bug report.</p>
-    <div class="demo-wrap">
-      <div class="gh-issue">
-        <div class="ghi-head"><span class="ghi-dot" aria-hidden="true"></span> <b>Crash when uploading large files</b> <span class="ghi-num">#482</span></div>
-        <p class="ghi-body">Uploads larger than 50 MB crash the app in Firefox on Linux.</p>
-        <p class="ghi-meta">First issue from a new contributor</p>
+      <div class="catalog-rail" hidden>
+        <h3 id="category-title">Bot jobs</h3>
+        <nav class="catnav" id="catnav" aria-labelledby="category-title"></nav>
       </div>
-      <div class="demo-feed" id="demofeed"></div>
-      <button class="btn" id="replaydemo" type="button">Replay demo <span aria-hidden="true">↻</span></button>
+      <div class="catalog-results">
+        <p class="result-count" id="result-count" role="status"></p>
+        <div id="sections"></div>
+        <div class="empty" id="empty" hidden>
+          <p>No bots match the current search and filters.</p>
+          <button class="btn" id="clear-filters" type="button">Clear filters</button>
+        </div>
+        <noscript><p class="sub">Enable JavaScript to search the catalog, or <a href="https://github.com/sanketpatel32/github-bot-store#the-bots">browse the bots on GitHub</a>.</p></noscript>
+      </div>
     </div>
   </section>
 
-  <section class="content-section" id="how">
-    <h2 class="section">Run a bot your way</h2>
+  <section class="content-section" id="how" data-reveal>
+    <h2 class="section">How to run a bot</h2>
     <div class="steps">
-      <div class="step"><h3>GitHub Actions</h3><p>Add a workflow to your repository and let GitHub run the bot when events arrive or on a schedule.</p></div>
-      <div class="step"><h3>Go binary</h3><p>Download a release or build from source. Point a GitHub webhook at the bot, or run scheduled bots with cron.</p></div>
-      <div class="step"><h3>Docker Compose</h3><p>Build the bot from the repository and run it as a container with a persistent spool.</p></div>
+      <div class="step"><h3>GitHub Actions</h3><p>Add a setup file to your project. GitHub runs the bot when something happens or at a time you choose.</p></div>
+      <div class="step"><h3>Download the program</h3><p>Run the bot on your own server. GitHub can tell it when something changes, or you can run it on a schedule.</p></div>
+      <div class="step"><h3>Docker Compose</h3><p>Run the bot in a Docker container on a computer you manage.</p></div>
     </div>
   </section>
 
-  <section class="content-section" id="generator" tabindex="-1">
-    <h2 class="section">Config generator</h2>
-    <p class="sub">Choose a bot and a deployment option to get a ready-to-paste configuration.</p>
+  <section class="content-section" id="generator" tabindex="-1" data-reveal>
+    <h2 class="section">Create a setup file</h2>
+    <p class="sub">Pick a bot and where you want to run it. Then copy the setup instructions.</p>
     <div class="generator-panel">
       <div class="generator-controls">
         <select id="genbot" aria-label="Choose a bot"></select>
@@ -117,7 +112,7 @@
           <option value="docker">Docker Compose</option>
           <option value="actions">GitHub Actions</option>
         </select>
-        <button id="gencopy" class="btn primary" type="button">Copy config</button>
+        <button id="gencopy" class="btn primary" type="button">Copy setup</button>
       </div>
       <pre id="genout" tabindex="0" aria-label="Generated configuration"></pre>
     </div>
@@ -132,8 +127,8 @@
   <div class="container footer-inner">
     <span>GitHub Bot Store · MIT licensed</span>
     <div class="footer-links">
-      <a href="#gallery">Bot catalog</a>
-      <a href="#generator">Config generator</a>
+      <a href="#demo">Bot demo</a>
+      <a href="#generator">Set up a bot</a>
       <a href="https://github.com/sanketpatel32/github-bot-store">Source on GitHub</a>
     </div>
   </div>
@@ -321,7 +316,19 @@ const emptyMsg = document.getElementById("empty");
 const resultCount = document.getElementById("result-count");
 const search = document.getElementById("search");
 const permission = document.getElementById("permfilter");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 document.getElementById("botcount").textContent = BOTS.length;
+
+if (!reducedMotion.matches && "IntersectionObserver" in window) {
+  const reveal = new IntersectionObserver((entries, observer) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add("is-revealed");
+      observer.unobserve(entry.target);
+    }
+  }, { threshold: 0.12 });
+  document.querySelectorAll("[data-reveal]").forEach(section => reveal.observe(section));
+}
 
 if (!("closedBy" in HTMLDialogElement.prototype)) {
   let pressedOutside = false;
@@ -372,7 +379,7 @@ const groups = CATEGORIES.map(cat => {
       </div>
       <p class="description">${bot.desc}</p>
       <div class="meta">
-        <span class="tag ${bot.type}">${bot.type === "cron" ? "Scheduled" : "Webhook"}</span>
+        <span class="tag ${bot.type}">${bot.type === "cron" ? "On a schedule" : "On GitHub events"}</span>
         <span class="tag">${bot.perms.split(",")[0]}</span>
         <button class="card-action" type="button" aria-haspopup="dialog" aria-label="View bot: ${bot.name}">View bot <span aria-hidden="true">↗</span></button>
       </div>`;
@@ -383,6 +390,15 @@ const groups = CATEGORIES.map(cat => {
   });
   return { section, link, cards, headingCount: section.querySelector(".cat-count"), linkCount: link.querySelector(".count") };
 });
+
+function markCategory() {
+  for (const { link } of groups) {
+    if (link.hash === location.hash) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+  }
+}
+window.addEventListener("hashchange", markCategory);
+markCategory();
 
 function render() {
   const q = search.value.trim().toLowerCase();
@@ -402,7 +418,7 @@ function render() {
     shown += count;
   }
   emptyMsg.hidden = shown > 0;
-  catnav.hidden = shown === 0;
+  catnav.parentElement.hidden = shown === 0;
   resultCount.textContent = `${shown} of ${BOTS.length} bots`;
 }
 
@@ -421,12 +437,14 @@ async function copyText(button, value) {
   try {
     await navigator.clipboard.writeText(value);
     button.textContent = "Copied!";
+    button.dataset.copied = "";
   } catch {
     button.textContent = "Copy failed";
   }
   setTimeout(() => {
     button.textContent = label;
     button.removeAttribute("aria-disabled");
+    delete button.dataset.copied;
   }, 1500);
 }
 
@@ -495,7 +513,7 @@ function openModal(bot) {
         <li>Generate a workflow for this bot and save it as <code>.github/workflows/${bot.name}.yml</code>.</li>
         <li>Push the workflow to your repository to let GitHub run the bot.</li>
       </ol>
-      <a class="btn primary" id="configure-bot" href="#generator">Generate workflow <span aria-hidden="true">↗</span></a>
+      <a class="btn primary" id="configure-bot" href="#generator">Create setup file <span aria-hidden="true">↗</span></a>
 
       <h2>Good to know</h2>
       <ul>${bot.notes.map(n => `<li>${n}</li>`).join("")}</ul>
@@ -537,32 +555,39 @@ function openModal(bot) {
 // ---------- live demo: watch three bots react to one issue ----------
 (function () {
   const feed = document.getElementById("demofeed");
-  if (!feed) return;
+  const issue = document.querySelector("#demo .gh-issue");
+  const replay = document.getElementById("replaydemo");
+  if (!feed || !issue || !replay) return;
   const script = [
-    { t: "3 seconds later", emoji: "👋", bot: "first-touch-welcomer", html: "<b>Welcome!</b> Thanks for opening your first issue — a maintainer will be with you soon. Meanwhile, any extra detail helps." },
-    { t: "5 seconds later", emoji: "🏷️", bot: "keyword-issue-labeler", html: 'spotted the words <i>crash</i> and <i>error</i> — labeled it <span class="dlabel">bug</span>' },
-    { t: "8 seconds later", emoji: "📋", bot: "issue-form-validator", html: "gently asked for the missing piece: <i>could you add the steps to reproduce?</i>" },
+    { t: "3 seconds later", emoji: "👋", bot: "first-touch-welcomer", html: "Said hello to someone new." },
+    { t: "5 seconds later", emoji: "🏷️", bot: "keyword-issue-labeler", html: 'Saw <i>crash</i> and <i>error</i>, then added the <span class="dlabel">bug</span> label.' },
+    { t: "8 seconds later", emoji: "📋", bot: "issue-form-validator", html: "Asked how to make the crash happen again." },
   ];
   let timers = [];
-  function play() {
+  function addEvent(ev) {
+    const div = document.createElement("div");
+    div.className = "devt";
+    div.innerHTML = `<div class="dt">${ev.t}</div>
+      <div class="dbox"><span class="demoji" aria-hidden="true">${ev.emoji}</span><div><span class="dbotname">${ev.bot}</span>${ev.html}</div></div>`;
+    feed.appendChild(div);
+  }
+  function play(delay = 90) {
     timers.forEach(clearTimeout);
     timers = [];
-    feed.innerHTML = "";
-    script.forEach((ev, i) => {
-      timers.push(setTimeout(() => {
-        const div = document.createElement("div");
-        div.className = "devt";
-        div.innerHTML = `<div class="dt">${ev.t}</div>
-          <div class="dbox"><span class="demoji">${ev.emoji}</span><div><span class="dbotname">${ev.bot}</span>${ev.html}</div></div>`;
-        feed.appendChild(div);
-      }, 700 + i * 1700));
-    });
+    feed.replaceChildren();
+    if (reducedMotion.matches) script.forEach(addEvent);
+    else timers = script.map((event, i) => setTimeout(() => addEvent(event), delay + i * 700));
   }
-  const io = new IntersectionObserver((en) => {
-    if (en[0].isIntersecting) { io.disconnect(); play(); }
+  if (!("IntersectionObserver" in window)) {
+    play();
+    replay.onclick = () => play();
+    return;
+  }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting)) { io.disconnect(); play(650); }
   }, { threshold: 0.3 });
-  io.observe(document.querySelector(".gh-issue"));
-  document.getElementById("replaydemo").onclick = play;
+  io.observe(issue);
+  replay.onclick = () => { io.disconnect(); play(); };
 })();
 
 render();
@@ -645,7 +670,12 @@ ${isCron ? "            REPO=\${{ github.repository }}\n" : ""}${bot.requiredEnv
       out += "\n\n# NOTE: Projects v2 mutations need a classic PAT or GitHub App token —\n# secrets.GITHUB_TOKEN cannot manage projects. Store a PAT as GH_PAT and use it instead.";
     }
   }
+  const changed = genout.textContent && genout.textContent !== out;
   genout.textContent = out;
+  if (changed && !reducedMotion.matches) {
+    genout.getAnimations().forEach(animation => animation.cancel());
+    genout.animate([{ opacity: 0.6 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
+  }
 }
 genbot.onchange = renderGen;
 genmode.onchange = renderGen;
