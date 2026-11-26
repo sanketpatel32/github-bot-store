@@ -7,9 +7,9 @@
 <meta property="og:description" content="32 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
 <meta name="site-kind" content="software">
 <meta name="page-type" content="software">
-<meta name="theme-color" content="#f7f4ed">
+<meta name="theme-color" content="#f4f7fc">
 <title>GitHub Bot Store — tiny self-hosted automation</title>
-<link rel="stylesheet" href="site.css?v=triage">
+<link rel="stylesheet" href="site.css?v=workbench">
 </head>
 <body>
 <nav class="site-nav" aria-label="Site navigation">
@@ -27,26 +27,30 @@
 <header class="landing">
   <div class="container landing-inner">
     <div class="landing-copy">
-      <p class="landing-kicker" data-enter><strong id="botcount">32</strong> free GitHub bots</p>
-      <h1 data-enter>Let bots handle <em>your GitHub chores.</em></h1>
-      <p class="landing-summary" data-enter>A bot is a small program that does a job for you. These bots can label bug reports, remind people to review code, and write release notes.</p>
+      <h1 data-enter>Free bots for your <em>GitHub project.</em></h1>
+      <p class="landing-summary" data-enter>A bot is a small program that does a job for you. Let it label bug reports, remind people to review code, or write release notes.</p>
       <div class="cta-row" data-enter>
         <a class="btn landing-primary" href="#gallery">Find a bot <span aria-hidden="true">↓</span></a>
         <a class="btn landing-secondary" href="#how">How to run a bot <span aria-hidden="true">↗</span></a>
       </div>
+      <p class="landing-kicker" data-enter><strong id="botcount">32</strong> bots · Open source · Run in GitHub or on your own server</p>
     </div>
-    <section class="landing-stage" id="demo" aria-labelledby="demo-title" data-enter>
-      <div class="demo-wrap">
+    <section class="landing-stage" id="demo" aria-label="Bot demo" data-enter>
+      <button class="btn demo-toggle" id="demo-toggle" type="button" aria-expanded="false" aria-controls="demo-panel" hidden>See a bot handle a bug report <span aria-hidden="true">⌄</span></button>
+      <div class="demo-wrap" id="demo-panel">
         <div class="demo-bar">
-          <h2 id="demo-title">Bots at work</h2>
+          <h2 id="demo-title">Example bot run</h2>
           <button class="btn" id="replaydemo" type="button">Replay <span aria-hidden="true">↻</span></button>
         </div>
-        <div class="gh-issue">
-          <div class="ghi-head"><span class="ghi-dot" aria-hidden="true"></span> <b>Crash when uploading large files</b> <span class="ghi-num">#482</span></div>
-          <p class="ghi-body">Uploads larger than 50 MB crash the app. There’s no error message.</p>
-        </div>
-        <div class="demo-feed" id="demofeed" aria-live="polite" aria-relevant="additions">
-          <noscript><p class="ghi-body">Enable JavaScript to replay the bot responses.</p></noscript>
+        <div class="demo-story">
+          <div class="gh-issue">
+            <p class="ghi-num">New bug report · #482</p>
+            <div class="ghi-head"><b>Crash when uploading large files</b></div>
+            <p class="ghi-body">Uploads larger than 50 MB crash the app. There’s no error message.</p>
+          </div>
+          <div class="demo-feed" id="demofeed" aria-label="Bot actions" aria-live="polite" aria-relevant="additions">
+            <noscript><p class="ghi-body">Enable JavaScript to replay the bot responses.</p></noscript>
+          </div>
         </div>
       </div>
     </section>
@@ -380,8 +384,7 @@ const groups = CATEGORIES.map(cat => {
       <p class="description">${bot.desc}</p>
       <div class="meta">
         <span class="tag ${bot.type}">${bot.type === "cron" ? "On a schedule" : "On GitHub events"}</span>
-        <span class="tag">${bot.perms.split(",")[0]}</span>
-        <button class="card-action" type="button" aria-haspopup="dialog" aria-label="View bot: ${bot.name}">View bot <span aria-hidden="true">↗</span></button>
+        <button class="card-action" type="button" aria-haspopup="dialog" aria-label="View and set up: ${bot.name}">View and set up <span aria-hidden="true">↗</span></button>
       </div>`;
     card.querySelector("button").onclick = () => openModal(bot);
     grid.appendChild(card);
@@ -557,18 +560,28 @@ function openModal(bot) {
   const feed = document.getElementById("demofeed");
   const issue = document.querySelector("#demo .gh-issue");
   const replay = document.getElementById("replaydemo");
+  const toggle = document.getElementById("demo-toggle");
   if (!feed || !issue || !replay) return;
+  if (toggle) {
+    toggle.hidden = false;
+    toggle.onclick = () => {
+      toggle.setAttribute("aria-expanded", String(toggle.getAttribute("aria-expanded") !== "true"));
+    };
+  }
   const script = [
-    { t: "3 seconds later", emoji: "👋", bot: "first-touch-welcomer", html: "Said hello to someone new." },
-    { t: "5 seconds later", emoji: "🏷️", bot: "keyword-issue-labeler", html: 'Saw <i>crash</i> and <i>error</i>, then added the <span class="dlabel">bug</span> label.' },
-    { t: "8 seconds later", emoji: "📋", bot: "issue-form-validator", html: "Asked how to make the crash happen again." },
+    { t: "+3s", emoji: "👋", bot: "first-touch-welcomer", html: "Said hello to someone new" },
+    { t: "+5s", emoji: "🏷️", bot: "keyword-issue-labeler", html: 'Added the <span class="dlabel">bug</span> label' },
+    { t: "+8s", emoji: "📋", bot: "issue-form-validator", html: "Asked how to make the crash happen again" },
   ];
   let timers = [];
   function addEvent(ev) {
     const div = document.createElement("div");
     div.className = "devt";
-    div.innerHTML = `<div class="dt">${ev.t}</div>
-      <div class="dbox"><span class="demoji" aria-hidden="true">${ev.emoji}</span><div><span class="dbotname">${ev.bot}</span>${ev.html}</div></div>`;
+    div.innerHTML = `<div class="dbox">
+      <span class="demoji" aria-hidden="true">${ev.emoji}</span>
+      <div><b>${ev.html}</b><span class="dbotname">${ev.bot}</span></div>
+      <span class="dt" aria-hidden="true">${ev.t}</span>
+    </div>`;
     feed.appendChild(div);
   }
   function play(delay = 90) {
