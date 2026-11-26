@@ -170,14 +170,3 @@ jobs:
       - run: go run ./bots/contributor-milestones
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  dependency-update-grouper:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.26"
-          cache: true
-      - run: go run ./bots/dependency-update-grouper
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

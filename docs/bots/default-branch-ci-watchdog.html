@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>default-branch-ci-watchdog — github-bot-store</title>
+<meta name="description" content="Opens an issue when a GitHub Actions workflow fails on your main branch. It links to the failed run and closes the issue when a run passes.">
+<meta property="og:title" content="default-branch-ci-watchdog — a tiny self-hosted GitHub bot">
+<meta property="og:description" content="Opens an issue when a GitHub Actions workflow fails on your main branch. It links to the failed run and closes the issue when a run passes.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sanketpatel32.github.io/github-bot-store/bots/default-branch-ci-watchdog.html">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#f4f7fc">
+<link rel="canonical" href="https://sanketpatel32.github.io/github-bot-store/bots/default-branch-ci-watchdog.html">
+<link rel="stylesheet" href="../site.css?v=agent-setup">
+</head>
+<body>
+<nav class="site-nav" aria-label="Site navigation">
+  <div class="container">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">&gt;_</span> GitHub Bot Store</a>
+    <div class="navlinks">
+      <a class="gh-btn" href="https://github.com/sanketpatel32/github-bot-store">GitHub</a>
+    </div>
+  </div>
+</nav>
+<main class="container detail">
+  <a class="detail-back" href="../#gallery">← Back to bot catalog</a>
+  <header class="detail-hero">
+    <div class="badge" aria-hidden="true">🛠️</div>
+    <span class="tag cron">cron</span>
+    <h1>default-branch-ci-watchdog</h1>
+    <p>Opens an issue when a GitHub Actions workflow fails on your main branch. It links to the failed run and closes the issue when a run passes.</p>
+  </header>
+  <dl>
+    <div><dt>Events</dt><dd>Scheduled hourly; checks push runs on the default branch</dd></div>
+    <div><dt>Permissions</dt><dd><code>actions: read, contents: read, issues: write</code></dd></div>
+    <div><dt>Port</dt><dd><code>8133</code></dd></div>
+  </dl>
+  <section class="detail-section">
+    <h2>Good to know</h2>
+    <ul><li>Set CI_WORKFLOW to the workflow filename, such as ci.yml</li><li>Keeps one open alert per workflow and skips canceled runs</li><li>Builds from source until a release includes the bot</li></ul>
+  </section>
+  <section class="detail-section">
+    <h2>Install</h2>
+    <p>Build the bot from source or use the config generator to create a GitHub Actions workflow that builds it for you.</p>
+    <div class="cta-row">
+      <a class="btn" href="https://github.com/sanketpatel32/github-bot-store/tree/main/bots/default-branch-ci-watchdog">Source and README</a>
+      <a class="btn" href="../#generator">Config generator</a>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="container footer-inner">
+    <span>GitHub Bot Store · MIT licensed</span>
+    <a href="https://github.com/sanketpatel32/github-bot-store">Source on GitHub</a>
+  </div>
+</footer>
+</body>
+</html>

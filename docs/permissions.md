@@ -19,6 +19,7 @@ What each bot needs. Smallest scope that works — don't grant more.
 | release-drafter | push, pull_request | Contents: write (releases) |
 | keyword-issue-labeler | issues | Issues: write |
 | ci-failure-commenter | check_run, check_suite | Checks: read, Pull requests: write |
+| default-branch-ci-watchdog | none (scheduled) | Actions: read, Contents: read for source checkout in Actions, Issues: write |
 
 ## Troubleshooting
 

@@ -39,6 +39,8 @@ type bot struct {
 	GhEvents     []string          `json:"gh_events"`
 	ActionsPerms map[string]string `json:"actions_perms"`
 	RequiredEnv  []string          `json:"required_env"`
+	SourceOnly   bool              `json:"source_only"`
+	Schedule     string            `json:"schedule"`
 }
 
 func renderJS(bots []bot) string {
@@ -65,8 +67,15 @@ func renderJS(bots []bot) string {
 		for i, e := range b.RequiredEnv {
 			envs[i] = fmt.Sprintf("%q", e)
 		}
-		fmt.Fprintf(&sb, "    ghEvents: [%s], actionsPerms: {%s}, requiredEnv: [%s] },\n",
+		fmt.Fprintf(&sb, "    ghEvents: [%s], actionsPerms: {%s}, requiredEnv: [%s]",
 			strings.Join(evs, ", "), strings.Join(permPairs, ", "), strings.Join(envs, ", "))
+		if b.SourceOnly {
+			sb.WriteString(", sourceOnly: true")
+		}
+		if b.Schedule != "" {
+			fmt.Fprintf(&sb, ", schedule: %q", b.Schedule)
+		}
+		sb.WriteString(" },\n")
 	}
 	return sb.String()
 }
@@ -147,6 +156,14 @@ func main() {
 		page = strings.ReplaceAll(page, "{{TYPE}}", b.Type)
 		page = strings.ReplaceAll(page, "{{NOTES}}", notes.String())
 		page = strings.ReplaceAll(page, "{{PORT}}", fmt.Sprint(b.Port))
+		install := "Download a Linux binary for amd64 or arm64 with checksums, or run the bot as a GitHub Action using a workflow from the repository."
+		download := `      <a class="btn primary" href="https://github.com/sanketpatel32/github-bot-store/releases/latest">Download binaries</a>` + "\n"
+		if b.SourceOnly {
+			install = "Build the bot from source or use the config generator to create a GitHub Actions workflow that builds it for you."
+			download = ""
+		}
+		page = strings.ReplaceAll(page, "{{INSTALL_DESCRIPTION}}", install)
+		page = strings.ReplaceAll(page, "{{BINARY_DOWNLOAD}}", download)
 		os.WriteFile("docs/bots/"+b.Name+".html", []byte(page), 0o644)
 	}
 	fmt.Printf("catalog regenerated: %d bots (+ static detail pages)\n", len(bots))

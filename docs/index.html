@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta property="og:title" content="github-bot-store — tiny self-hosted GitHub automation bots">
-<meta property="og:description" content="32 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
+<meta property="og:description" content="30 zero-dependency Go bots for PR triage, reviews, releases and CI — single 5MB binaries that idle at 6MB RAM.">
 <meta name="site-kind" content="software">
 <meta name="page-type" content="software">
 <meta name="theme-color" content="#f4f7fc">
@@ -33,7 +33,7 @@
         <a class="btn landing-primary" href="#gallery">Find a bot <span aria-hidden="true">↓</span></a>
         <a class="btn landing-secondary" href="#how">How to run a bot <span aria-hidden="true">↓</span></a>
       </div>
-      <p class="landing-kicker" data-enter><strong id="botcount">32</strong> bots · Open source · Run in GitHub or on your own server</p>
+      <p class="landing-kicker" data-enter><strong id="botcount">30</strong> bots · Open source · Run in GitHub or on your own server</p>
     </div>
     <section class="landing-stage" id="demo" aria-label="Bot demo" data-enter>
       <button class="btn demo-toggle" id="demo-toggle" type="button" aria-expanded="false" aria-controls="demo-panel" hidden>See a bot handle a bug report <span aria-hidden="true">⌄</span></button>
@@ -271,31 +271,16 @@ const BOTS = [
     events: "none (scheduled)", perms: "contents: read, issues: write",
     notes: ["Concurrent link checking with per-URL caching", "HEAD-then-GET fallback for picky servers"],
     ghEvents: ["schedule"], actionsPerms: {"contents": "read", "issues": "write"}, requiredEnv: ["REPO"] },
-  { name: "issue-link-checker", emoji: "🔍", type: "webhook", port: 8126, accent: "#a371f7",
-    desc: "Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.", category: "Issues", title: "Checks links in issues",
-    events: "Issues", perms: "issues: write",
-    notes: ["Skips github.com links to save rate quota", "Edits re-check, comment updates in place"],
-    ghEvents: ["issues"], actionsPerms: {"issues": "write"}, requiredEnv: [] },
   { name: "issue-form-validator", emoji: "📝", type: "webhook", port: 8127, accent: "#e3b341",
     desc: "Makes sure new issues follow your template — a bug report without steps to reproduce gets a friendly request to fill it in properly.", category: "Issues", title: "Enforces the issue template",
     events: "Issues", perms: "issues: write",
     notes: ["REQUIRED_SECTIONS configures which headings must be filled", "Rejects placeholder content, not just empty sections"],
     ghEvents: ["issues"], actionsPerms: {"issues": "write"}, requiredEnv: [] },
-  { name: "dependency-update-grouper", emoji: "📦", type: "webhook", port: 8128, accent: "#58a6ff",
-    desc: "Groups the flood of dependabot pull requests into batches so you review them once a week instead of every single day.", category: "Releases & CI", title: "Tames the dependabot flood",
-    events: "Pull requests", perms: "pulls: read, issues: write",
-    notes: ["Exactly one deps/* label per PR", "Pairs well with auto-merger: auto-merge deps/patch only"],
-    ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "read"}, requiredEnv: [] },
   { name: "flaky-test-tracker", emoji: "🎲", type: "webhook", port: 8129, accent: "#d29922",
     desc: "Notices when the same test fails intermittently across runs and files a tracking issue. Flaky tests stop being invisible.", category: "Releases & CI", title: "Hunts flaky tests",
     events: "Check runs", perms: "checks: read, issues: write",
     notes: ["FLAKE_THRESHOLD controls sensitivity (default 3)", "State persisted in flaky-state.json"],
     ghEvents: ["check_run"], actionsPerms: {"checks": "read", "issues": "write"}, requiredEnv: [] },
-  { name: "merge-queue-assistant", emoji: "🚦", type: "webhook", port: 8130, accent: "#a371f7",
-    desc: "Shows which pull request is next in line to merge, labeling the queue so everyone knows the order.", category: "Pull requests", title: "Shows who merges next",
-    events: "Pull requests", perms: "pulls: read, issues: write",
-    notes: ["Oldest queued PR is always the head", "Head merging or closing promotes the next in line automatically"],
-    ghEvents: ["pull_request"], actionsPerms: {"issues": "write", "pull-requests": "write"}, requiredEnv: [] },
   { name: "discussion-triage-bot", emoji: "💬", type: "cron", port: 8131, accent: "#39c5cf",
     desc: "Flags discussions that have been sitting unanswered. Questions from your community deserve replies.", category: "Community & planning", title: "Flags unanswered questions",
     events: "none (scheduled)", perms: "discussions: read, issues: write",
@@ -306,6 +291,11 @@ const BOTS = [
     events: "Issues, pull requests", perms: "issues: read, pulls: read, projects: write",
     notes: ["Assigned work moves to In Progress, closed/merged to Done", "GraphQL-powered; degrades gracefully if the board has no Status field"],
     ghEvents: ["issues", "pull_request"], actionsPerms: {"issues": "read", "pull-requests": "read"}, requiredEnv: ["PROJECT_OWNER", "PROJECT_NUMBER"] },
+  { name: "default-branch-ci-watchdog", emoji: "🛠️", type: "cron", port: 8133, accent: "#d29922",
+    desc: "Opens an issue when a GitHub Actions workflow fails on your main branch. It links to the failed run and closes the issue when a run passes.", category: "Releases & CI", title: "Alerts you when the main branch breaks",
+    events: "Scheduled hourly; checks push runs on the default branch", perms: "actions: read, contents: read, issues: write",
+    notes: ["Set CI_WORKFLOW to the workflow filename, such as ci.yml", "Keeps one open alert per workflow and skips canceled runs", "Builds from source until a release includes the bot"],
+    ghEvents: ["schedule"], actionsPerms: {"actions": "read", "contents": "read", "issues": "write"}, requiredEnv: ["REPO", "CI_WORKFLOW"], sourceOnly: true, schedule: "17 * * * *" },
 
 ];
 
@@ -482,16 +472,19 @@ function humanEvents(bot) {
 }
 function openModal(bot) {
   const isCron = bot.type === "cron";
-  const buildCmd = isCron
+  const buildCmd = bot.sourceOnly ? buildConfig(bot, "binary") : isCron
     ? `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... REPO=owner/repo\n./${bot.name}   # health endpoint on :${bot.port}`
     : `go build -o ${bot.name} ./bots/${bot.name}\nexport GITHUB_TOKEN=ghp_... WEBHOOK_SECRET=...\n./${bot.name}   # listens on :${bot.port}`;
   const installCmd = `curl -L https://github.com/sanketpatel32/github-bot-store/releases/latest/download/${bot.name}-linux-amd64.tar.gz | tar xz\nchmod +x ${bot.name}-linux-amd64\n./${bot.name}-linux-amd64`;
+  const scheduleHelp = bot.schedule
+    ? "Use the GitHub Actions setup above for the configured schedule."
+    : "Copy the job from <code>.github/workflows/bots-cron.yml</code> to run it nightly on GitHub.";
   const setupSection = isCron
     ? `<h2>Scheduling</h2>
     <ul>
       <li>This bot runs on a schedule, not webhooks: it sweeps your repo periodically.</li>
-      <li>Zero-server option: it already runs as a GitHub Action — copy the job from <code>.github/workflows/bots-cron.yml</code> (nightly at 03:17 UTC).</li>
-      <li>Or cron it yourself: <code>17 3 * * * cd /opt/bots && GITHUB_TOKEN=... REPO=owner/repo ./${bot.name}</code></li>
+      <li>${scheduleHelp}</li>
+      <li>To run it on your server, use the commands in the setup panel.</li>
       <li>Permissions: <code>${bot.perms}</code></li>
     </ul>`
     : `<h2>Webhook setup</h2>
@@ -530,7 +523,7 @@ function openModal(bot) {
         <h2 id="modal-setup-title">Set up this bot</h2>
         <div class="setup-options" role="group" aria-label="Setup options">
           <button class="btn" type="button" data-mode="actions" aria-controls="setup-panel">GitHub Actions</button>
-          <button class="btn" type="button" data-mode="binary" aria-controls="setup-panel">Download and run</button>
+          <button class="btn" type="button" data-mode="binary" aria-controls="setup-panel">${bot.sourceOnly ? "Build and run" : "Download and run"}</button>
           <button class="btn" type="button" data-mode="docker" aria-controls="setup-panel">Docker Compose</button>
           <button class="btn" type="button" data-mode="guide" aria-controls="technical-guide">Server guide</button>
         </div>
@@ -546,11 +539,11 @@ function openModal(bot) {
           </div>
         </div>
         <div class="technical-guide" id="technical-guide" role="region" aria-label="Self-hosting and technical guide" tabindex="0" hidden>
-            <h2>Download prebuilt binary</h2>
+            ${bot.sourceOnly ? "" : `<h2>Download prebuilt binary</h2>
             <div class="codewrap"><button class="btn" data-copy="install" type="button">Copy install command</button><pre tabindex="0" aria-label="Install command">${installCmd}</pre></div>
-            <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code>: verify before deploying.</li></ul>
+            <ul><li>amd64 and arm64 tarballs on every release, with <code>checksums.txt</code>: verify before deploying.</li></ul>`}
 
-            <h2>Or build from source</h2>
+            <h2>${bot.sourceOnly ? "Build from source" : "Or build from source"}</h2>
             <div class="codewrap"><button class="btn" data-copy="build" type="button">Copy build command</button><pre tabindex="0" aria-label="Build command">${buildCmd}</pre></div>
 
             ${setupSection}
@@ -576,7 +569,7 @@ function openModal(bot) {
   const workflowPath = `.github/workflows/${bot.name}.yml`;
   const hints = {
     actions: `Setting it up yourself? Save the setup below as <code>${workflowPath}</code>, then push it to GitHub.`,
-    binary: "Run these commands on your server to download, check, and start the bot.",
+    binary: bot.sourceOnly ? "Run these commands on your server to build and start the bot." : "Run these commands on your server to download, check, and start the bot.",
     docker: "Save this as <code>docker-compose.yml</code> in your local copy of the bot project.",
   };
   function showMode(mode) {
@@ -676,23 +669,30 @@ function buildConfig(bot, mode) {
   let out = "";
   if (mode === "binary") {
     const archive = `${bot.name}-linux-amd64.tar.gz`;
+    const program = bot.sourceOnly ? bot.name : `${bot.name}-linux-amd64`;
     const envLines = [
       "export GITHUB_TOKEN_FILE=/run/secrets/github_token",
       isCron ? "export REPO=owner/repo" : "export WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret",
-      ...bot.requiredEnv.filter(e => e !== "REPO").map(e => `export ${e}=<value>`),
+      ...bot.requiredEnv.filter(e => e !== "REPO").map(e => `export ${e}=change-me`),
       "export ALLOWED_REPOS=owner/repo",
       "export SPOOL_DIR=/var/lib/ghbot",
     ];
-    out = `# 1. download the archive AND its checksums, then verify before extracting
+    const prepare = bot.sourceOnly
+      ? `# 1. build from source with Go
+git clone https://github.com/sanketpatel32/github-bot-store
+cd github-bot-store
+go build -o ${program} ./bots/${bot.name}`
+      : `# 1. download the archive AND its checksums, then verify before extracting
 curl -fsSLO https://github.com/sanketpatel32/github-bot-store/releases/latest/download/${archive}
 curl -fsSLO https://github.com/sanketpatel32/github-bot-store/releases/latest/download/checksums.txt
-grep "${archive}$" checksums.txt | sha256sum -c - && tar xzf ${archive}
+grep "${archive}$" checksums.txt | sha256sum -c - && tar xzf ${archive}`;
+    out = `${prepare}
 
 # 2. configure — exported so the bot process inherits them
 ${envLines.join("\n")}
 
 # 3. run — see deploy/systemd-example.service for a hardened unit
-./${bot.name}-linux-amd64`;
+./${program}`;
   } else if (mode === "docker") {
     out = `# docker-compose.yml — save exactly as written; the build context is the
 # repository root, so clone first: git clone https://github.com/sanketpatel32/github-bot-store
@@ -715,7 +715,7 @@ volumes:
   spool-data:`;
   } else {
     const triggers = bot.ghEvents.map(e =>
-      e === "schedule" ? "  schedule: [ { cron: \"17 3 * * *\" } ]\n  workflow_dispatch: {}" : `  ${e}: {}`).join("\n");
+      e === "schedule" ? `  schedule: [ { cron: "${bot.schedule || "17 3 * * *"}" } ]\n  workflow_dispatch: {}` : `  ${e}: {}`).join("\n");
     const perms = Object.entries(bot.actionsPerms).map(([k, v]) => `  ${k}: ${v}`).join("\n");
     out = `# .github/workflows/${bot.name}.yml — zero servers, zero Go toolchain
 name: ${bot.name}
@@ -723,16 +723,27 @@ on:
 ${triggers}
 permissions:
 ${perms}
-jobs:
+${bot.schedule ? 'concurrency: { group: "${{ github.workflow }}" }\n' : ""}jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: sanketpatel32/github-bot-store@v0.1.0
+${bot.sourceOnly ? `      - uses: actions/checkout@v4
+        with:
+          repository: sanketpatel32/github-bot-store
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go run ./bots/${bot.name}
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+${isCron ? "          REPO: ${{ github.repository }}\n" : ""}${bot.requiredEnv.filter(e => e !== "REPO").map(e => `          ${e}: change-me`).join("\n")}` : `      - uses: sanketpatel32/github-bot-store@v0.1.0
         with:
           bot: ${bot.name}
           token: \${{ secrets.GITHUB_TOKEN }}
           env_config: |
-${isCron ? "            REPO=\${{ github.repository }}\n" : ""}${bot.requiredEnv.filter(e => e !== "REPO").map(e => `            ${e}=change-me\n`).join("")}`;
+${isCron ? "            REPO=\${{ github.repository }}\n" : ""}${bot.requiredEnv.filter(e => e !== "REPO").map(e => `            ${e}=change-me\n`).join("")}`}`;
     if (bot.name === "project-board-sync") {
       out += "\n\n# NOTE: Projects v2 mutations need a classic PAT or GitHub App token —\n# secrets.GITHUB_TOKEN cannot manage projects. Store a PAT as GH_PAT and use it instead.";
     }

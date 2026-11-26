@@ -36,7 +36,7 @@ sleep 2
 echo "== replaying scenario webhook"
 event="issues"
 case "$bot" in
-  pr-*|auto-merger|reviewer-assigner|conventional-pr-check|changelog-checker|license-header-checker|breaking-change-guard|merge-queue-assistant|pr-template-checker) event="pull_request" ;;
+  pr-*|auto-merger|reviewer-assigner|conventional-pr-check|changelog-checker|license-header-checker|breaking-change-guard|pr-template-checker) event="pull_request" ;;
 esac
 go run ./tools/replay -event "$event" -target localhost:18101 "fixtures/$scenario/payload.json"
 sleep 2

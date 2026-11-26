@@ -654,8 +654,8 @@ func Serve(cfg Config, name string, handler WebhookHandler) {
 			}
 			// dependency and CI automation senders are allowlisted by default:
 			// several bots in this store exist precisely to react to them
-			// (dependency-update-grouper on dependabot PRs, ci-failure-commenter
-			// on actions output). In Actions mode github-actions[bot] output
+			// (pull request checks on dependency updates and CI reporting on
+			// Actions output). In Actions mode github-actions[bot] output
 			// cannot retrigger workflows, so it cannot loop (#104).
 			allow := os.Getenv("BOT_EVENT_ALLOWLIST")
 			if allow == "" {

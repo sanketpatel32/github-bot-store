@@ -612,29 +612,6 @@
     "title": "Finds dead doc links"
   },
   {
-    "name": "issue-link-checker",
-    "emoji": "\ud83d\udd0d",
-    "type": "webhook",
-    "port": 8126,
-    "accent": "#a371f7",
-    "desc": "Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically.",
-    "events": "Issues",
-    "perms": "issues: write",
-    "notes": [
-      "Skips github.com links to save rate quota",
-      "Edits re-check, comment updates in place"
-    ],
-    "gh_events": [
-      "issues"
-    ],
-    "actions_perms": {
-      "issues": "write"
-    },
-    "required_env": [],
-    "category": "Issues",
-    "title": "Checks links in issues"
-  },
-  {
     "name": "issue-form-validator",
     "emoji": "\ud83d\udcdd",
     "type": "webhook",
@@ -656,30 +633,6 @@
     "required_env": [],
     "category": "Issues",
     "title": "Enforces the issue template"
-  },
-  {
-    "name": "dependency-update-grouper",
-    "emoji": "\ud83d\udce6",
-    "type": "webhook",
-    "port": 8128,
-    "accent": "#58a6ff",
-    "desc": "Groups the flood of dependabot pull requests into batches so you review them once a week instead of every single day.",
-    "events": "Pull requests",
-    "perms": "pulls: read, issues: write",
-    "notes": [
-      "Exactly one deps/* label per PR",
-      "Pairs well with auto-merger: auto-merge deps/patch only"
-    ],
-    "gh_events": [
-      "pull_request"
-    ],
-    "actions_perms": {
-      "issues": "write",
-      "pull-requests": "read"
-    },
-    "required_env": [],
-    "category": "Releases & CI",
-    "title": "Tames the dependabot flood"
   },
   {
     "name": "flaky-test-tracker",
@@ -704,30 +657,6 @@
     "required_env": [],
     "category": "Releases & CI",
     "title": "Hunts flaky tests"
-  },
-  {
-    "name": "merge-queue-assistant",
-    "emoji": "\ud83d\udea6",
-    "type": "webhook",
-    "port": 8130,
-    "accent": "#a371f7",
-    "desc": "Shows which pull request is next in line to merge, labeling the queue so everyone knows the order.",
-    "events": "Pull requests",
-    "perms": "pulls: read, issues: write",
-    "notes": [
-      "Oldest queued PR is always the head",
-      "Head merging or closing promotes the next in line automatically"
-    ],
-    "gh_events": [
-      "pull_request"
-    ],
-    "actions_perms": {
-      "pull-requests": "write",
-      "issues": "write"
-    },
-    "required_env": [],
-    "category": "Pull requests",
-    "title": "Shows who merges next"
   },
   {
     "name": "discussion-triage-bot",
@@ -782,5 +711,36 @@
     ],
     "category": "Community & planning",
     "title": "Keeps boards in sync"
+  },
+  {
+    "name": "default-branch-ci-watchdog",
+    "emoji": "\ud83d\udee0\ufe0f",
+    "type": "cron",
+    "port": 8133,
+    "accent": "#d29922",
+    "desc": "Opens an issue when a GitHub Actions workflow fails on your main branch. It links to the failed run and closes the issue when a run passes.",
+    "events": "Scheduled hourly; checks push runs on the default branch",
+    "perms": "actions: read, contents: read, issues: write",
+    "notes": [
+      "Set CI_WORKFLOW to the workflow filename, such as ci.yml",
+      "Keeps one open alert per workflow and skips canceled runs",
+      "Builds from source until a release includes the bot"
+    ],
+    "gh_events": [
+      "schedule"
+    ],
+    "actions_perms": {
+      "actions": "read",
+      "contents": "read",
+      "issues": "write"
+    },
+    "required_env": [
+      "REPO",
+      "CI_WORKFLOW"
+    ],
+    "source_only": true,
+    "schedule": "17 * * * *",
+    "category": "Releases & CI",
+    "title": "Alerts you when the main branch breaks"
   }
 ]

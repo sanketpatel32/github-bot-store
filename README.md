@@ -4,6 +4,8 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 
 **[Browse the Bot Store](https://sanketpatel32.github.io/github-bot-store/)** — full catalog with setup guides.
 
+[Bot catalog review](docs/bot-catalog-review.md) covers the retired bots and the new default-branch CI watchdog.
+
 ## The Bots
 
 | Bot | What it does |
@@ -33,13 +35,11 @@ A collection of small, self-hosted GitHub webhook bots written in Go. Each compi
 | [breaking-change-guard](bots/breaking-change-guard) | Flags pull requests that look like they break existing behavior, so they get extra scrutiny before merging. | webhook |
 | [release-reminder](bots/release-reminder) | Nags you when lots of unreleased work has piled up on the main branch. A gentle push to actually ship. | cron |
 | [docs-link-checker](bots/docs-link-checker) | Checks links in your documentation and README, and reports the dead ones. Nothing embarrasses like a 404 in the getting-started guide. | cron |
-| [issue-link-checker](bots/issue-link-checker) | Verifies links people paste into issues actually work. Dead reproduction links get flagged automatically. | webhook |
 | [issue-form-validator](bots/issue-form-validator) | Makes sure new issues follow your template — a bug report without steps to reproduce gets a friendly request to fill it in properly. | webhook |
-| [dependency-update-grouper](bots/dependency-update-grouper) | Groups the flood of dependabot pull requests into batches so you review them once a week instead of every single day. | webhook |
 | [flaky-test-tracker](bots/flaky-test-tracker) | Notices when the same test fails intermittently across runs and files a tracking issue. Flaky tests stop being invisible. | webhook |
-| [merge-queue-assistant](bots/merge-queue-assistant) | Shows which pull request is next in line to merge, labeling the queue so everyone knows the order. | webhook |
 | [discussion-triage-bot](bots/discussion-triage-bot) | Flags discussions that have been sitting unanswered. Questions from your community deserve replies. | cron |
 | [project-board-sync](bots/project-board-sync) | Keeps your GitHub project board in sync automatically — new issues and PRs land on the board, status follows the work. | webhook |
+| [default-branch-ci-watchdog](bots/default-branch-ci-watchdog) | Opens an issue when a GitHub Actions workflow fails on your main branch. It links to the failed run and closes the issue when a run passes. | cron |
 
 ## Automations
 
